@@ -1,0 +1,10 @@
+services:
+  sky:
+    build: .
+    container_name: sky
+    env_file: .env
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel">
+  <div class="card">
+    <h2 style="margin-top:0">Request a photo</h2>
+    <p class="sub">Tell the telescope what you'd like it to point at next. Every request gets
+      reviewed before it's scheduled.</p>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="post" action="{{ url_for('request_form') }}">
+      <div class="field">
+        <label for="name">Your name (optional)</label>
+        <input id="name" name="name" maxlength="80" value="{{ name or '' }}">
+      </div>
+      <div class="field">
+        <label for="prompt">What should the telescope look at?</label>
+        <textarea id="prompt" name="prompt" maxlength="500" required>{{ prompt or '' }}</textarea>
+        <div class="hint">Name a specific object (like "the Orion Nebula" or "Saturn"),
+          or ask for something general like "a cool nebula." Up to 500 characters.</div>
+      </div>
+      <div class="hp">
+        <label for="website">Website</label>
+        <input id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+      <button type="submit">Submit request</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Wrapper: runs seestar.py inside the skill's own venv, creating it on first use.
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV="$DIR/.venv"
+if [ ! -x "$VENV/bin/python" ]; then
+  echo "seestar: creating venv (one-time)..." >&2
+  uv venv --python 3.12 "$VENV" -q
+  "$VENV/bin/python" -m pip install -q seestarpy numpy opencv-python-headless pillow requests imageio-ffmpeg skyfield 2>/dev/null \
+    || uv pip install --python "$VENV/bin/python" -q seestarpy numpy opencv-python-headless pillow requests imageio-ffmpeg skyfield
+fi
+if [ ! -f "$HOME/.seestarpy/seestar.pem" ]; then
+  echo "seestar: missing ~/.seestarpy/seestar.pem (signing key). See SKILL.md 'Key'." >&2
+  exit 2
+fi
+exec "$VENV/bin/python" "$DIR/seestar.py" "$@"

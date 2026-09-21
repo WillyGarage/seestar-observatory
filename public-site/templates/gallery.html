@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="bar"><div class="in">
+  <label for="sort">Sort</label>
+  <select id="sort">
+    <option value="taken-desc">Newest first</option>
+    <option value="taken-asc">Oldest first</option>
+    <option value="title-asc">Name A-Z</option>
+    <option value="title-desc">Name Z-A</option>
+    <option value="object-asc">Object A-Z</option>
+    <option value="bytes-desc">Largest file</option>
+  </select>
+  <select id="kind"><option value="">All types</option></select>
+  <input id="q" type="search" placeholder="Search" style="flex:1;min-width:120px">
+  <button id="bgrid" class="on">Grid</button>
+  <button id="blist">List</button>
+</div></div>
+<div class="grid" id="grid"></div>
+<table id="list" hidden><thead><tr>
+  <th data-k="title">Name</th><th data-k="object">Object</th><th data-k="kind">Type</th>
+  <th data-k="taken">Taken</th><th data-k="frames">Frames</th><th data-k="width">Size</th><th data-k="bytes">File</th>
+</tr></thead><tbody></tbody></table>
+<div id="lb"><img><div class="cap"></div></div>
+<script>
+let ITEMS = {{ items | tojson }};
+const $ = s => document.querySelector(s);
+const fdate = s => new Date(s).toLocaleString([], {year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const fsize = b => b > 1e6 ? (b/1048576).toFixed(1)+' MB' : Math.round(b/1024)+' KB';
+const esc = s => (s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+[...new Set(ITEMS.map(i=>i.kind).filter(Boolean))].sort().forEach(k=>{
+  const o=document.createElement('option'); o.value=o.textContent=k; $('#kind').append(o);
+});
+
+function sorted(){
+  const [k,dir] = $('#sort').value.split('-');
+  const q = $('#q').value.trim().toLowerCase();
+  const kind = $('#kind').value;
+  let a = ITEMS.filter(i => (!kind || i.kind===kind) &&
+    (!q || (i.title+' '+i.object+' '+i.kind+' '+i.notes).toLowerCase().includes(q)));
+  a.sort((x,y)=>{
+    let p=x[k], r=y[k];
+    if(p==null)p=''; if(r==null)r='';
+    const c = typeof p==='number'&&typeof r==='number' ? p-r : String(p).localeCompare(String(r));
+    return dir==='desc' ? -c : c;
+  });
+  return a;
+}
+
+function render(){
+  const a = sorted();
+  $('#grid').innerHTML = a.map(i=>`
+    <div class="card">
+      <img loading="lazy" src="/thumb/${i.filename}" data-f="${i.filename}" alt="${i.title}">
+      <div class="meta">
+        <div class="t">${i.title}</div>
+        <div class="o">${i.object} &middot; ${fdate(i.taken)}</div>
+        <div class="tags">
+          ${i.total_exp?`<span class="tag">${i.total_exp} total</span>`:''}
+          ${i.frames>1?`<span class="tag">${i.frames} frames</span>`:''}
+          ${i.filter&&i.filter!=='None'?`<span class="tag">${i.filter} filter</span>`:''}
+          <span class="tag">${i.width}&times;${i.height}</span>
+        </div>
+        ${i.notes?`<div class="notes">${i.notes}</div>`:''}
+        <div class="credit">Requested by ${esc(i.req_id ? (i.submitter_name || 'Anonymous') : (i.credit || 'AI'))}</div>
+        <button class="like ${i.liked?'on':''}" data-f="${i.filename}" aria-pressed="${i.liked?'true':'false'}" title="Like this photo">
+          <span class="heart">&hearts;</span><span class="n">${i.likes||0}</span>
+        </button>
+      </div>
+    </div>`).join('') || '<div class="empty">Nothing here yet.</div>';
+  $('#list tbody').innerHTML = a.map(i=>`
+    <tr><td class="n"><a href="/full/${i.filename}">${i.title}</a></td><td>${i.object}</td><td>${i.kind}</td>
+    <td>${fdate(i.taken)}</td><td>${i.frames??''}</td>
+    <td>${i.width}&times;${i.height}</td><td>${fsize(i.bytes)}</td></tr>`).join('');
+}
+
+$('#sort').onchange = $('#kind').onchange = render;
+$('#q').oninput = render;
+document.querySelectorAll('#list th').forEach(th=>th.onclick=()=>{
+  const k = th.dataset.k, cur = $('#sort').value;
+  $('#sort').value = cur === k+'-asc' ? k+'-desc' : k+'-asc';
+  if(![...$('#sort').options].some(o=>o.value===$('#sort').value)){
+    const o=document.createElement('option'); o.value=o.textContent=$('#sort').value; $('#sort').append(o);
+    $('#sort').value=o.value;
+  }
+  render();
+});
+function view(v){
+  const l = v==='list';
+  $('#grid').hidden=l; $('#list').hidden=!l;
+  $('#blist').classList.toggle('on',l); $('#bgrid').classList.toggle('on',!l);
+  history.replaceState(null,'',l?'#list':'#');
+}
+$('#bgrid').onclick=()=>view('grid');
+$('#blist').onclick=()=>view('list');
+if(location.hash==='#list') view('list');
+async function toggleLike(btn){
+  btn.disabled = true;
+  try {
+    const r = await fetch('/like/'+encodeURIComponent(btn.dataset.f), {method:'POST'});
+    const d = await r.json();
+    if(d.ok){
+      btn.classList.toggle('on', d.liked);
+      btn.setAttribute('aria-pressed', d.liked ? 'true' : 'false');
+      btn.querySelector('.n').textContent = d.likes;
+      const it = ITEMS.find(x=>x.filename===btn.dataset.f);
+      if(it){ it.likes = d.likes; it.liked = d.liked ? 1 : 0; }
+      if(d.capped){
+        btn.title = 'Vote limit reached for this photo';
+        btn.classList.add('capped');
+        setTimeout(()=>btn.classList.remove('capped'), 1500);
+      }
+    }
+  } catch(_) {}
+  btn.disabled = false;
+}
+$('#grid').onclick = e => {
+  const btn = e.target.closest('.like');
+  if(btn){ toggleLike(btn); return; }
+  const img = e.target.closest('img[data-f]');
+  if(!img) return;
+  const f = img.dataset.f;
+  const i = ITEMS.find(x=>x.filename===f);
+  $('#lb img').src = '/full/'+f;
+  $('#lb .cap').innerHTML = `${i.title} &middot; ${fdate(i.taken)} &middot; <a href="/full/${f}">full size ${i.width}&times;${i.height}</a>`;
+  $('#lb').classList.add('open');
+};
+$('#lb').onclick = e => { if(e.target.tagName!=='A') $('#lb').classList.remove('open') };
+addEventListener('keydown', e => e.key==='Escape' && $('#lb').classList.remove('open'));
+render();
+window.onSiteChange = async () => {
+  try { const r = await fetch('/gallery.json', {cache:'no-store'}); if(r.ok){ ITEMS = await r.json(); render(); } } catch(_) {}
+};
+</script>
+{% endblock %}

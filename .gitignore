@@ -1,0 +1,34 @@
+# Nothing personal, nothing secret, nothing huge.
+
+# Local config (scope IP, your coordinates, tokens, server logins)
+*.env
+!*.env.example
+.config/
+
+# Images and data the scope produces
+captures/
+*.fit
+*.fits
+*.jpg
+*.jpeg
+*.png
+!docs/images/*.jpg
+!docs/images/*.png
+
+# Ephemeris, fetched by scripts/fetch-ephemeris.sh
+skills/seestar/data/*.bsp
+
+# Runtime state
+runner/state.json
+runner/plan.json
+runner/night.log
+runner/horizon.json
+*.db
+*.sqlite3
+public-site/data/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc

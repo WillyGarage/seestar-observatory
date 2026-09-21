@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="adm">
+  <div class="admhead"><h2>Telescope</h2><form method="post" action="{{ url_for('admin_logout') }}"><button type="submit">Sign out</button></form></div>
+  <div class="card">
+    <div class="stat">
+      <div><b>Now</b><span>{{ status.text }}</span></div>
+      <div><b>Since</b><span>{{ st.since_pac or '—' }}</span></div>
+      <div><b>Frames</b><span>{% if st.frames is defined %}{{ st.frames }} stacked{% if st.minutes is defined %} · {{ st.minutes }} of {{ st.planned }} min{% endif %}{% else %}—{% endif %}</span></div>
+      <div><b>Last heard</b><span>{{ st.updated_pac or 'never' }}</span></div>
+    </div>
+    <div class="note">Read-only here. To change anything mid-night, talk to the telescope session in Happy.</div>
+  </div>
+
+  <h2>New requests <span class="muted">({{ new|length }} waiting for you)</span></h2>
+  {% if not new %}<div class="card"><p class="sub" style="margin:0">Nothing waiting.</p></div>{% endif %}
+  {% for r in new %}
+  <div class="card" id="req-{{ r.id }}">
+    <div class="raw"><span class="k">Visitor's text - unverified, shown only to you</span>{{ r.prompt_text }}</div>
+    <div class="note">{{ 'from "' ~ r.submitter_name ~ '"' if r.submitter_name else 'Anonymous' }}, {{ r.when }}</div>
+    <form method="post" action="{{ url_for('admin_request', req_id=r.id) }}">
+      <div class="row2">
+        <div class="field"><label>Target the telescope will point at</label>
+          <input name="target" maxlength="120" placeholder="e.g. Saturn, M31, NGC 7000" required>
+          <div class="hint">A real object the telescope can find. The visitor's words never go to the telescope, only this.</div></div>
+        <div class="field"><label>Public wording (what the queue page shows)</label>
+          <textarea name="display_prompt" maxlength="500" placeholder="One or two plain sentences."></textarea></div>
+      </div>
+      <div class="acts">
+        <button type="submit" name="action" value="accept" class="primary">Accept</button>
+        <button type="submit" name="action" value="reject" class="danger" formnovalidate>Reject</button>
+        <input name="triage_note" maxlength="300" placeholder="Note to the visitor if rejected (optional)" style="flex:1;min-width:200px">
+      </div>
+    </form>
+  </div>
+  {% endfor %}
+
+  <h2>Queue <span class="muted">({{ visitors|length }} visitor · {{ picks|length }} picks · {{ done|length }} done)</span></h2>
+  <div class="card">
+    {% for it in visitors + picks %}
+      <div class="qrow"><div class="body"><span class="badge {{ it.status }}">{{ it.status }}</span> <span class="qprompt" style="display:inline">{{ it.display_prompt }}</span>
+        <div class="who">{{ it.who }}{% if it.planned_for %} · {{ it.planned_for }}{% endif %}</div></div></div>
+    {% else %}<p class="sub" style="margin:0">Queue is empty.</p>{% endfor %}
+  </div>
+
+  <h2 id="photos">All photos <span class="muted">({{ photos|length }} stored · {{ photos|selectattr('featured')|list|length }} shown on the gallery)</span></h2>
+  <div class="card">
+    <div class="phg">
+    {% for p in photos %}
+      <div class="ph" data-id="{{ p.id }}">
+        <a href="/full/{{ p.filename }}"><img src="/thumb/{{ p.filename }}" alt="" loading="lazy"></a>
+        <div class="pt">{{ p.title }}</div>
+        <div class="pc">
+          <label class="sw {{ 'on' if p.featured else '' }}" data-featured="{{ p.featured }}"><span class="knob"></span></label>
+          <span class="lbl">{{ 'Shown' if p.featured else 'Hidden' }}</span>
+          <select class="cred"><option {{ 'selected' if p.credit == 'AI' else '' }}>AI</option><option {{ 'selected' if p.credit == owner_name else '' }}>{{ owner_name }}</option></select>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+    <div class="note">Shown / Hidden controls the public gallery page. Every picture stays stored either way. "Requested by" is {{ owner_name }} or AI unless a visitor request is attached.</div>
+  </div>
+</div>
+<script>
+window.onSiteChange = () => {};   // admin edits bump the version; don't reload under the editor's fingers
+async function savePhoto(el, data){
+  const id = el.closest('.ph').dataset.id; const fd = new FormData(); for (const k in data) fd.append(k, data[k]);
+  const r = await fetch('/admin/photo/'+id, {method:'POST', body: fd, headers:{'X-Requested-With':'fetch'}}); return r.ok;
+}
+document.querySelectorAll('.sw').forEach(sw => sw.onclick = async () => {
+  const on = sw.dataset.featured === '1' || sw.dataset.featured === 'True';
+  if (await savePhoto(sw, {featured: on ? '0' : '1'})) { sw.dataset.featured = on ? '0' : '1'; sw.classList.toggle('on', !on); sw.nextElementSibling.textContent = on ? 'Hidden' : 'Shown'; }
+});
+document.querySelectorAll('.cred').forEach(s => s.onchange = () => savePhoto(s, {credit: s.value}));
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{{ site_title }}{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<header>
+  <h1><a href="{{ url_for('gallery') }}">Sky</a></h1>
+  <div class="sub">{{ site_subtitle }}</div>
+</header>
+<nav class="top">
+  <a href="{{ url_for('gallery') }}" class="{{ 'on' if active=='gallery' else '' }}">Gallery</a>
+  <a href="{{ url_for('request_form') }}" class="{{ 'on' if active=='request' else '' }}">Request a photo</a>
+  <a href="{{ url_for('queue') }}" class="{{ 'on' if active=='queue' else '' }}">Queue</a>
+  {% if is_admin %}<a href="{{ url_for('admin') }}" class="{{ 'on' if active=='admin' else '' }}">Admin</a>{% endif %}
+</nav>
+<div class="sitenotice {{ notice.cls if notice else '' }}" id="notice" {{ '' if notice else 'hidden' }}><div class="in">
+  <span class="ico" aria-hidden="true"></span>
+  <div class="msg"><strong class="hd">{{ notice.heading if notice else '' }}</strong><span class="bd">{{ notice.body if notice else '' }}</span></div>
+</div></div>
+<div class="status {{ status.cls }}" id="banner" {{ 'hidden' if notice else '' }}><div class="in"><span class="dot"></span><span class="txt">{{ status.text }}</span><span class="when">{{ status.when }}</span></div></div>
+{% block body %}{% endblock %}
+<script>
+// Pages keep themselves current: poll /state every 25 s; update the banner in place and
+// re-render (or reload) when anything changed on the site. Polling, not push: waitress has a
+// small thread pool and held connections would exhaust it.
+(function(){
+  let ver = "{{ version }}";
+  const b = document.getElementById('banner');
+  async function tick(){
+    try{
+      const r = await fetch('/state', {cache:'no-store'}); if(!r.ok) return;
+      const d = await r.json();
+      const n = document.getElementById('notice');
+      if(d.notice && (d.notice.body || d.notice.heading)){
+        n.className = 'sitenotice ' + (d.notice.cls || 'warn');
+        n.querySelector('.hd').textContent = d.notice.heading || '';
+        n.querySelector('.bd').textContent = d.notice.body || '';
+        n.hidden = false; b.hidden = true;
+      } else {
+        n.hidden = true; b.hidden = false;
+      }
+      b.className = 'status ' + d.status.cls;
+      b.querySelector('.txt').textContent = d.status.text;
+      b.querySelector('.when').textContent = d.status.when;
+      if(d.version !== ver){ ver = d.version; if(window.onSiteChange) window.onSiteChange(); else location.reload(); }
+    }catch(_){}
+  }
+  setInterval(tick, 25000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) tick(); });
+})();
+</script>

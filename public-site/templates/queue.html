@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel" style="max-width:760px">
+  <div class="card">
+    <h2 style="margin-top:0">Queue</h2>
+    <p class="sub">Requests from visitors come first, in the order they arrived. When there are none, the telescope
+      picks its own targets; those are listed next, and anyone can move them up or down.</p>
+
+    {% if not visitors and not picks and not done %}<p class="sub">Nothing in the queue yet.</p>{% endif %}
+
+    {% if visitors %}<h3>Requests</h3>{% endif %}
+    {% for it in visitors %}
+      <div class="qrow"><div class="body">
+        <span class="badge {{ it.status }}">{{ it.status }}</span>
+        <div class="qprompt">{{ it.display_prompt }}</div>
+        <div class="who">{{ it.who }}</div>
+      </div></div>
+    {% endfor %}
+
+    {% if picks %}<h3>The telescope's own picks <span class="sub" style="font-weight:400">· move them with the arrows</span></h3>{% endif %}
+    {% set ns = namespace(divider=false) %}
+    {% for it in picks %}
+      {% if it.planned_for == 'next' and not ns.divider %}
+        {% set ns.divider = true %}
+        <div class="cut"><span>Probably won't fit tonight · next session</span></div>
+      {% endif %}
+      <div class="qrow" data-id="{{ it.id }}">
+        <div class="body">
+          <span class="badge {{ it.status }}">{{ 'photographing' if it.status == 'accepted' else it.status }}</span>
+          <div class="qprompt">{{ it.display_prompt }}</div>
+          <div class="who">{{ it.who }}</div>
+        </div>
+        <div class="arrows">
+          <button class="mv" data-dir="up" title="Move up" {% if loop.first %}disabled{% endif %}>&#9650;</button>
+          <button class="mv" data-dir="down" title="Move down" {% if loop.last %}disabled{% endif %}>&#9660;</button>
+        </div>
+      </div>
+    {% endfor %}
+
+    {% if done %}<h3>Done</h3>{% endif %}
+    {% for it in done %}
+      <div class="qrow">
+        {% if it.photo %}<a href="/full/{{ it.photo.filename }}"><img src="/thumb/{{ it.photo.filename }}" alt=""></a>{% endif %}
+        <div class="body">
+          <span class="badge done">done</span>
+          <div class="qprompt">{{ it.display_prompt }}</div>
+          <div class="who">{{ it.who }}</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+<script>
+document.querySelectorAll('.mv').forEach(b => b.onclick = async () => {
+  const row = b.closest('.qrow'); b.disabled = true;
+  try {
+    const r = await fetch('/queue/move', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id: Number(row.dataset.id), dir: b.dataset.dir})});
+    if (r.ok) location.reload(); else b.disabled = false;
+  } catch(_) { b.disabled = false; }
+});
+</script>
+{% endblock %}

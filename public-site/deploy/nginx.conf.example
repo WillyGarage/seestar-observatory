@@ -1,0 +1,25 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name sky.example.com;
+
+    client_max_body_size 25m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8090;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # NOTE: `certbot --nginx -d sky.example.com` will add the listen 443 ssl
+    # server block and the lines below (ssl_certificate, ssl_certificate_key,
+    # include options-ssl-nginx.conf, ssl_dhparam) automatically. Leave
+    # commented until certbot has run.
+    # listen 443 ssl;
+    # ssl_certificate /etc/letsencrypt/live/sky.example.com/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/sky.example.com/privkey.pem;
+    # include /etc/letsencrypt/options-ssl-nginx.conf;
+    # ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel" style="max-width:380px">
+  <div class="card">
+    <h2 style="margin-top:0">Sign in</h2>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    {% if locked %}<div class="error">Too many wrong tries. Locked for an hour.</div>{% endif %}
+    <form method="post">
+      <div class="field"><label for="pw">Password</label><input id="pw" name="password" type="password" autocomplete="current-password" autofocus></div>
+      <button type="submit" class="primary" {% if locked %}disabled{% endif %}>Sign in</button>
+      <div class="hint" style="margin-top:8px">Stays signed in on this device for 30 days.</div>
+    </form>
+  </div>
+</div>
+{% endblock %}

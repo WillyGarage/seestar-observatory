@@ -1,0 +1,18 @@
+# Python 3.11+. Install into a venv next to the skill:
+#   python3 -m venv skills/seestar/.venv
+#   skills/seestar/.venv/bin/pip install -r requirements.txt
+#
+# Everything that drives the telescope runs under that interpreter.
+
+seestarpy>=0.6.0          # native JSON-RPC client for the scope (TCP 4700)
+skyfield>=1.55            # ephemeris, rise/set, altitude and azimuth
+numpy>=2.0
+opencv-python-headless>=4.9   # stacking, alignment, star detection, JPEG output
+pillow>=10.0              # EXIF and a few image conversions
+requests>=2.31            # weather APIs, Alpaca REST
+smbprotocol>=1.14         # pulling finished stacks off the scope's SMB share
+tzlocal>=5.0
+
+# Deliberately absent: astropy and scipy. Nothing here needs them, they are large,
+# and the code reads FITS with its own reader (skills/seestar/fitproc.py) and finds
+# stars with cv2.connectedComponentsWithStats.

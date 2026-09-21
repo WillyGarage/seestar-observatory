@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel">
+  <div class="card">
+    <h2 style="margin-top:0">Your request</h2>
+    <p><span class="badge {{ req.status }}">{{ req.status }}</span></p>
+    {% if req.status == 'new' %}
+      <p>Waiting to be reviewed. Check back later.</p>
+    {% elif req.status == 'rejected' %}
+      <p>This one wasn't scheduled.</p>
+      {% if req.triage_note %}<p class="sub">{{ req.triage_note }}</p>{% endif %}
+    {% elif req.status in ('accepted', 'scheduled') %}
+      <p>{{ req.display_prompt }}</p>
+      <p class="sub">Status: {{ req.status }}. Watch the <a href="{{ url_for('queue') }}">queue</a>
+        or check back here.</p>
+    {% elif req.status == 'done' and photo %}
+      <p>{{ req.display_prompt }}</p>
+      <a href="/full/{{ photo.filename }}">
+        <img src="/thumb/{{ photo.filename }}" alt="{{ photo.title }}" style="max-width:100%;border-radius:8px">
+      </a>
+      <p class="sub"><a href="{{ url_for('gallery') }}">See it in the gallery &rarr;</a></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
