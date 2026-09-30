@@ -220,6 +220,11 @@ def gallery():
     return render_template("gallery.html", items=items, active="gallery")
 
 
+@app.route("/how")
+def how():
+    return render_template("how.html", active="how")
+
+
 @app.route("/gallery.json")
 def gallery_json():
     conn = db.get_db()

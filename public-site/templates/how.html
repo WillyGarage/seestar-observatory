@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}How it works · {{ site_title }}{% endblock %}
+{% block body %}
+<style>
+.how{--ai:#2f5fb3;--ai-bg:#eaf0fb;--sc:#a8580c;--sc-bg:#fcf0e3;--site:#2f7d4f;--site-bg:#e6f4eb;
+  --ink:#1b1d21;--mut:#697080;--mut2:#4a5160;--line:#e3e6ea;--bg:#f6f7f9;
+  max-width:1200px;margin:0 auto;padding:8px 20px 70px}
+.how>*{max-width:900px}
+.how .intro{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 22px;box-shadow:0 1px 2px rgba(20,24,31,.05)}
+.how .intro h2{margin:0 0 8px;font-size:20px;font-weight:650;letter-spacing:-.01em}
+.how .intro p{margin:0 0 10px;color:#2c3038}
+.how .intro p:last-of-type{margin-bottom:0}
+.how a.inl{color:var(--ai)}
+.how .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.how .fact{background:var(--bg);border-radius:9px;padding:10px 12px}
+.how .fact .v{font-weight:650;font-size:16px}
+.how .fact .k{font-size:12px;color:var(--mut)}
+.how h3.sec{font-size:17px;font-weight:650;margin:34px 0 4px}
+.how .lead{color:var(--mut);font-size:14px;margin:0 0 14px}
+.how .who{display:flex;gap:8px 16px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin-bottom:12px}
+.how .pill{display:inline-block;font-size:11px;font-weight:650;border-radius:999px;padding:2px 8px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+.how .p-ai{background:var(--ai-bg);color:var(--ai)}.how .p-sc{background:var(--sc-bg);color:var(--sc)}.how .p-site{background:var(--site-bg);color:var(--site)}
+.how .heads{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;position:sticky;top:0;z-index:5;background:rgba(246,247,249,.95);backdrop-filter:blur(6px);padding:6px 0}
+.how .lh{font-weight:650;font-size:13px;padding:7px 12px;border-radius:8px;color:#fff}
+.how .lh.ai{background:var(--ai)}.how .lh.sc{background:var(--sc)}
+.how .phase{font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin:22px 0 8px}
+.how .row{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.how .gap{visibility:hidden}
+.how .step{background:#fff;border:1px solid var(--line);border-left:4px solid;border-radius:9px;padding:10px 12px;box-shadow:0 1px 2px rgba(20,24,31,.04)}
+.how .step .h{display:flex;align-items:center;gap:8px;font-weight:650;font-size:14.5px;margin-bottom:3px}
+.how .step .h .pill{margin-left:auto;display:none}
+.how .step .n{flex:none;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;font-size:12px;font-weight:700;color:#fff}
+.how .step .d{color:var(--mut2);font-size:13.5px}
+.how .s-ai{border-left-color:var(--ai)}.how .s-ai .n{background:var(--ai)}
+.how .s-sc{border-left-color:var(--sc)}.how .s-sc .n{background:var(--sc)}
+.how .s-site{border-left-color:var(--site)}.how .s-site .n{background:var(--site)}
+.how .arr{color:#a0a6b1;font-size:18px;line-height:1;margin:3px 0 3px 14px}
+.how .arr.r{text-align:right;margin-right:14px}
+.how .box{border:2px dashed;border-radius:12px;padding:10px}
+.how .box .bt{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px 2px}
+.how .box .step+.step{margin-top:8px}
+.how .box.ai{border-color:#b7c8e8;background:#f4f8fe}.how .box.ai .bt{color:var(--ai)}
+.how .box.sc{border-color:#e8c9a6;background:#fffaf3}.how .box.sc .bt{color:var(--sc)}
+.how .cyc{font-size:12px;color:var(--sc);margin:8px 0 0 2px}
+.how .ba{display:flex;gap:12px;margin-top:16px;align-items:center;flex-wrap:wrap}
+.how .ba figure{margin:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.how .ba img{display:block;height:300px;width:auto;background:#0b0d10}
+.how .ba figcaption{padding:9px 12px;font-size:12.5px;color:var(--mut2);max-width:300px}
+.how .ba figcaption b{color:var(--ink);display:block;font-size:13px}
+.how .ba figure.before figcaption{max-width:169px}
+.how .ba .to{color:#a0a6b1;font-size:22px}
+.how .why{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+.how .why p{margin:0 0 10px}
+.how .why ul{margin:0;padding-left:20px}
+.how .why li{margin-bottom:8px;color:#2c3038}
+.how .why .note{color:var(--mut);font-size:13.5px;margin:10px 0 0}
+.how .cta{margin-top:30px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+.how .cta p{margin:0;flex:1 1 260px}
+.how .cta+.cta{margin-top:12px}
+.how .btn{display:inline-block;background:var(--ink);color:#fff;text-decoration:none;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:600}
+.how .btn.ghost{background:#fff;color:var(--ink);border:1px solid #d3d8de}
+@media(max-width:700px){
+  .how .facts{grid-template-columns:1fr 1fr}
+  .how .row{grid-template-columns:1fr}
+  .how .gap,.how .heads{display:none}
+  .how .step .h .pill{display:inline-block}
+  .how .arr.r{text-align:left;margin-right:0}
+  .how .box.sc{order:-1;margin-bottom:10px}
+  .how .ba{flex-wrap:nowrap;gap:8px;align-items:flex-start}.how .ba .to{display:none}
+  .how .ba img{height:auto;width:100%}.how .ba figure.before{flex:0 0 36%}.how .ba figure{flex:1}
+  .how .ba figcaption,.how .ba figure.before figcaption{max-width:none}
+}
+</style>
+
+<main class="how">
+  <section class="intro">
+    <h2>A backyard telescope that runs itself</h2>
+    <p>Every picture here comes from one small smart telescope on a roof in Sunnyvale. On clear nights an AI runs it on its own. It picks what to shoot, waits for the right moment, aims, keeps an eye on the weather, turns the raw shots into a finished picture and posts it here. Nobody sits at an eyepiece.</p>
+    <p>Anyone can ask for something to be photographed. The software behind it all is open source on <a class="inl" href="https://github.com/WillyGarage/seestar-observatory">GitHub</a>.</p>
+    <div class="facts">
+      <div class="fact"><div class="v">50 mm</div><div class="k">lens, about the size of a coffee mug</div></div>
+      <div class="fact"><div class="v">3 &times; 5 Moons</div><div class="k">each picture covers a rectangle of sky 3 full Moons wide and 5 tall</div></div>
+      <div class="fact"><div class="v">10 seconds</div><div class="k">per shot</div></div>
+      <div class="fact"><div class="v">Dozens to hundreds</div><div class="k">shots stacked into each picture</div></div>
+    </div>
+  </section>
+
+  <h3 class="sec">From request to picture</h3>
+  <p class="lead">Two parts work together: the AI, on a computer in the house, and the telescope's own built-in software. This is the Dumbbell Nebula from 19 September, start to finish.</p>
+  <div class="who">
+    <span><span class="pill p-ai">AI</span> decides, watches, finishes</span>
+    <span><span class="pill p-sc">Telescope</span> aims, shoots, stacks</span>
+    <span><span class="pill p-site">This site</span> shows the result</span>
+  </div>
+
+  <div class="heads"><div class="lh ai">The AI (a computer in the house)</div><div class="lh sc">The telescope</div></div>
+
+  <div class="phase">1 &middot; Choose</div>
+  <div class="row">
+    <div class="step s-ai"><div class="h"><span class="n">1</span>Pick what to photograph<span class="pill p-ai">AI</span></div>
+      <div class="d">Either a person visiting this site asked for it, or the AI chose it from a list of objects not yet in the gallery. Visitors' requests go first. Both are on the <a class="inl" href="{{ url_for('queue') }}">Queue</a> page.</div></div>
+    <div class="gap"></div>
+  </div>
+  <div class="arr">&darr;</div>
+  <div class="row">
+    <div class="step s-ai"><div class="h"><span class="n">2</span>Wait for the right moment<span class="pill p-ai">AI</span></div>
+      <div class="d">The sky has to be fully dark and the nearest weather station has to report clear. The object has to be above the roof and trees, but not straight overhead where the mount can't follow. And the telescope never points low toward the neighbours' houses.</div></div>
+    <div class="gap"></div>
+  </div>
+
+  <div class="phase">2 &middot; Aim</div>
+  <div class="row">
+    <div class="step s-ai"><div class="h"><span class="n">3</span>Look up where it is<span class="pill p-ai">AI</span></div>
+      <div class="d">"M27" becomes a position in the sky from an astronomy catalogue. The AI sends it to the telescope with a filter choice: light-pollution filter for nebulae. &rarr;</div></div>
+    <div class="step s-sc"><div class="h"><span class="n">4</span>Swing over<span class="pill p-sc">Telescope</span></div>
+      <div class="d">Uses its compass, tilt sensor and clock to point roughly the right way. Close, rarely exact.</div></div>
+  </div>
+  <div class="arr r">&darr;</div>
+  <div class="row">
+    <div class="gap"></div>
+    <div class="step s-sc"><div class="h"><span class="n">5</span>Check against the stars<span class="pill p-sc">Telescope</span></div>
+      <div class="d">Takes a picture and matches its star pattern against a star map, so it knows exactly where it is pointing. It corrects until the object is centred. If clouds hide the stars it can't match them, and the AI parks and tries again later.</div></div>
+  </div>
+
+  <div class="phase">3 &middot; Shoot and stack</div>
+  <div class="row">
+    <div class="box ai">
+      <div class="bt">Every minute</div>
+      <div class="step s-ai"><div class="h"><span class="n">7</span>Keep watch<span class="pill p-ai">AI</span></div>
+        <div class="d">Counts shots kept and thrown out. No new shot for six minutes means cloud: it parks the telescope and retries in half an hour. It also watches the battery and runs a small heater to keep dew off the lens.</div></div>
+      <div class="step s-ai"><div class="h"><span class="n">8</span>Call it done<span class="pill p-ai">AI</span></div>
+        <div class="d">Stops after the planned time. That's anywhere from ten minutes to over an hour, depending on how faint the object is and how long it stays up.</div></div>
+    </div>
+    <div class="box sc">
+      <div class="bt">Over and over, back to back</div>
+      <div class="step s-sc"><div class="h"><span class="n">6a</span>Follow the sky<span class="pill p-sc">Telescope</span></div>
+        <div class="d">Motors keep turning so the object stays in view as the Earth rotates.</div></div>
+      <div class="step s-sc"><div class="h"><span class="n">6b</span>Take a 10-second shot<span class="pill p-sc">Telescope</span></div>
+        <div class="d">Each one on its own is dim and grainy.</div></div>
+      <div class="step s-sc"><div class="h"><span class="n">6c</span>Line it up and add it<span class="pill p-sc">Telescope</span></div>
+        <div class="d">Matches the new shot's stars to the pile so far, shifts and turns it to fit, and adds it in. A shot spoiled by a plane, a gust or a cloud gets thrown out.</div></div>
+      <div class="cyc">&#8635; about four shots a minute. The Dumbbell kept 67.</div>
+    </div>
+  </div>
+
+  <div class="phase">4 &middot; Finish and post</div>
+  <div class="row">
+    <div class="gap"></div>
+    <div class="step s-sc"><div class="h"><span class="n">9</span>Hand over the stack<span class="pill p-sc">Telescope</span></div>
+      <div class="d">One file with all 67 shots combined: 11 minutes of light, kept at full detail.</div></div>
+  </div>
+  <div class="arr">&darr;</div>
+  <div class="row">
+    <div class="step s-ai"><div class="h"><span class="n">10</span>Turn it into a picture<span class="pill p-ai">AI</span></div>
+      <div class="d">Removes the glow from city lights, brings up the faint gas so the eye can see it, cleans out colour speckle, and crops a close-up. The whole-field version is kept too.</div></div>
+    <div class="gap"></div>
+  </div>
+  <div class="arr">&darr;</div>
+  <div class="row">
+    <div class="step s-site"><div class="h"><span class="n">11</span>Post it here<span class="pill p-site">This site</span></div>
+      <div class="d">With how many shots, how long each, the filter used, and who asked for it. If it was your request, it says "Requested by" you.</div></div>
+    <div class="gap"></div>
+  </div>
+
+  <div class="ba">
+    <figure class="before"><img src="{{ url_for('static', filename='how-before.jpg') }}" alt="The telescope's own quick version of the Dumbbell Nebula stack: the whole field, grey, nebula small in the middle">
+      <figcaption><b>What the telescope makes</b>Its own quick version of the stack, whole field.</figcaption></figure>
+    <div class="to">&rarr;</div>
+    <figure><img src="{{ url_for('static', filename='how-after.jpg') }}" alt="The finished Dumbbell Nebula close-up, green and orange shell on a black star field">
+      <figcaption><b>After the AI finishes it</b>Same 67 shots, glow removed, faint gas brought up, cropped.</figcaption></figure>
+  </div>
+
+  <h3 class="sec">Why lots of short shots instead of a few long ones?</h3>
+  <div class="why">
+    <p>The telescope never holds perfectly still on the sky, so short shots come out sharper.</p>
+    <ul>
+      <li><b>The view slowly turns.</b> This telescope swivels and tilts like a camera on an ordinary tripod. Big observatory telescopes are tipped to line up with the Earth's axis. It can keep an object centred, but over time the picture rotates around it. In 10 seconds that doesn't show. Over 30 seconds, stars near the edges start to smear.</li>
+      <li><b>Small wobbles add up.</b> Wind and tiny motor errors blur a long shot more than a short one.</li>
+      <li><b>Bad luck costs less.</b> A plane crossing the view spoils 10 seconds, not a whole minute.</li>
+      <li><b>Stacking makes up the difference.</b> Because every shot gets lined up again before it's added, the drift between shots doesn't matter. Sixty-seven 10-second shots come out almost as clean as twenty-two 30-second ones.</li>
+    </ul>
+    <p class="note">What makes a picture better is more total time. The Great Pegasus Cluster used 471 shots, 78 minutes of light, and it's the best picture here so far.</p>
+  </div>
+
+  <div class="cta">
+    <p><b>Want something photographed?</b> Ask for any galaxy, nebula, star cluster, planet or the Moon that's visible from California.</p>
+    <a class="btn" href="{{ url_for('request_form') }}">Request a photo</a>
+    <a class="btn ghost" href="{{ url_for('queue') }}">See the queue</a>
+  </div>
+  <div class="cta">
+    <p><b>Want to build one?</b> The code that runs the telescope, the AI's night plan and this site is open source.</p>
+    <a class="btn ghost" href="https://github.com/WillyGarage/seestar-observatory">View on GitHub</a>
+  </div>
+</main>
+<script>window.onSiteChange = () => {};   // a long read; don't reload it when a new photo lands</script>
+{% endblock %}
