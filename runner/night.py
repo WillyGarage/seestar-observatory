@@ -373,9 +373,18 @@ def base_tilt():
     with azimuth but does NOT follow the arm's altitude, so a big number means the whole scope has
     tipped over, not that the arm is pointing somewhere). None if unreadable."""
     try:
-        return float((rpc("get_device_state") or {})["balance_sensor"]["data"]["angle"])
+        st = rpc("get_device_state") or {}
+        LAST["eq_mode"] = bool((st.get("mount") or {}).get("equ_mode"))
+        return float(st["balance_sensor"]["data"]["angle"])
     except Exception:
         return None
+
+
+def tipped(t):
+    """True when tilt t means the scope has fallen. On a wedge (EQ mode) the base is meant to lean
+    by the co-latitude (~53 deg here), so allow up to that plus the normal margin."""
+    limit = TILT_MAX + (90 - LAT if LAST.get("eq_mode") else 0)
+    return t > limit
 
 
 def upright():
@@ -384,9 +393,9 @@ def upright():
     if t is None:
         return True
     set_state(tilt=round(t, 1))
-    if t > TILT_MAX:
+    if tipped(t):
         if LAST.get("tipped") != True:
-            log(f"!!! base tilt {t:.0f} deg: the telescope is NOT standing upright. Freezing - no motor commands until it is back under {TILT_MAX:.0f} deg")
+            log(f"!!! base tilt {t:.0f} deg: the telescope is NOT standing upright. Freezing - no motor commands until it is standing again")
             post_status("offline", f"the telescope has tipped over (tilt {t:.0f} degrees). Nothing moves until someone stands it up")
             LAST["tipped"] = True
         return False
@@ -450,7 +459,7 @@ def park():
     try:
         rpc("iscope_stop_view"); time.sleep(2)
         t = base_tilt()
-        if t is not None and t > TILT_MAX:
+        if t is not None and tipped(t):
             log(f"not parking: base tilt {t:.0f} deg, the scope is not upright"); return
         rpc("scope_park"); log("parked")
     except Exception as ex:

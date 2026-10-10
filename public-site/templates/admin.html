@@ -10,6 +10,7 @@
       <div><b>Last heard</b><span>{{ st.updated_pac or 'never' }}</span></div>
     </div>
     <div class="note">Read-only here. To change anything mid-night, talk to the telescope session in Happy.</div>
+    <div style="margin-top:10px"><a href="{{ url_for('admin_scope') }}"><button type="button" class="primary">Scope live: power, tilt, polar alignment</button></a></div>
   </div>
 
   <h2>New requests <span class="muted">({{ new|length }} waiting for you)</span></h2>

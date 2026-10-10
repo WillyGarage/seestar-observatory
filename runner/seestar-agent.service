@@ -1,0 +1,15 @@
+[Unit]
+Description=Seestar scope agent (feeds the site's /admin/scope live page on request)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/seestar-observatory
+ExecStart=%h/seestar-observatory/skills/seestar/.venv/bin/python %h/seestar-observatory/runner/scope_agent.py
+Restart=always
+RestartSec=30
+Environment=PYTHONUNBUFFERED=1
+# Adjust the two paths above if you cloned the repo somewhere other than ~/seestar-observatory.
+
+[Install]
+WantedBy=default.target

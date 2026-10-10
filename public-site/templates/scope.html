@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Scope live · {{ site_title }}{% endblock %}
+{% block body %}
+<style>
+.sc{max-width:760px;margin:0 auto;padding:0 16px 60px}
+.sc h2{font-size:16px;margin:18px 0 10px}
+.sc .card{padding:16px 18px;margin-bottom:14px;overflow:visible}
+.sc .bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sc .bar2 button{padding:9px 14px;font-size:14px}
+.big{border-radius:12px;padding:20px 14px;text-align:center;color:#fff;font-weight:750;font-size:26px;background:#9aa3b2}
+.big.ok{background:#1f9d55}.big.bad{background:#c53030}
+.big small{display:block;font-size:14px;font-weight:500;opacity:.92;margin-top:4px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:#f6f7f9;border-radius:9px;padding:11px 12px}
+.tile b{display:block;font-size:12px;color:#697080;font-weight:600}
+.tile span{font-size:16px;font-weight:600}
+.tile i{display:block;font-style:normal;font-size:12px;color:#697080;margin-top:2px}
+.pa{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pa .v{font-size:30px;font-weight:800}
+.good{color:#1f9d55}.badc{color:#c53030}.amber{color:#b7791f}
+.log{font:12px ui-monospace,Menlo,monospace;color:#4a5160;max-height:180px;overflow:auto;white-space:pre-line}
+.muted2{color:#8a91a0;font-size:12px}
+#banner{display:none!important}
+.state{border-radius:12px;padding:14px 16px;margin-bottom:12px;border:1px solid #e3e6ea;background:#f6f7f9}
+.state .h{font-size:18px;font-weight:750;display:flex;align-items:center;gap:9px}
+.state .h .d{width:11px;height:11px;border-radius:50%;background:#9aa3b2;flex:none}
+.state .s{font-size:13px;color:#4a5160;margin-top:3px}
+.state.live{background:#eaf7ef;border-color:#bfe5cd}.state.live .d{background:#1f9d55;box-shadow:0 0 0 4px rgba(31,157,85,.18)}
+.state.wait{background:#fff7e6;border-color:#f1d9a6}.state.wait .d{background:#c98a12}
+.state.down{background:#fdecec;border-color:#f3b9b9}.state.down .d{background:#c53030}
+.readings.old{opacity:.5;filter:grayscale(1)}
+.readings.old .big{background:#9aa3b2!important}
+.oldtag{display:none;font-size:12px;font-weight:600;color:#697080;margin-bottom:8px}
+.readings.old .oldtag{display:block}
+</style>
+<div class="sc">
+  <div class="admhead"><h2>Scope live</h2><a href="{{ url_for('admin') }}" class="muted2">back to admin</a></div>
+
+  <div class="card">
+    <div class="state" id="state"><div class="h"><span class="d"></span><span id="stateh">Loading…</span></div><div class="s" id="states"></div></div>
+    <div class="bar2">
+      <button class="primary" id="b-live" onclick="cmd('live')">Start live status ({{ window_min }} min)</button>
+      <button id="b-polar" onclick="cmd('polar')">Measure polar alignment</button>
+      <button id="b-stop" onclick="cmd('stop')" hidden>Stop</button>
+    </div>
+    <div class="muted2" style="margin-top:8px">The laptop next to the scope reads it about once a second while live. It costs the scope almost no power.</div>
+  </div>
+
+  <div class="readings" id="readings">
+  <div class="card">
+    <div class="oldtag" id="oldtag">Last known, not current</div>
+    <div class="big" id="power">–</div>
+    <div class="tiles" style="margin-top:10px">
+      <div class="tile"><b>Battery</b><span id="batt">–</span><i id="charger"></i></div>
+      <div class="tile"><b>Battery temp</b><span id="btemp">–</span></div>
+      <div class="tile"><b>Board temp</b><span id="temp">–</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Alignment</h2>
+    <div class="tiles">
+      <div class="tile"><b>Lean from upright</b><span id="tilt">–</span><i id="tilthint"></i></div>
+      <div class="tile"><b>Tracking mode</b><span id="eq">–</span><i id="trk"></i></div>
+      <div class="tile"><b>Pointing</b><span id="point">–</span><i id="radec"></i></div>
+    </div>
+    <h2>Polar alignment <span class="muted2" id="paat"></span></h2>
+    <div class="pa">
+      <div class="tile"><b>Left / right</b><div class="v" id="paz">–</div><i id="pazh"></i></div>
+      <div class="tile"><b>Up / down</b><div class="v" id="palt">–</div><i id="palth"></i></div>
+    </div>
+    <div class="muted2" id="pastate" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">What it's doing</h2>
+    <div class="tiles">
+      <div class="tile"><b>Activity</b><span id="act">–</span><i id="actsub"></i></div>
+      <div class="tile"><b>Frames</b><span id="frames">–</span><i id="dropped"></i></div>
+      <div class="tile"><b>Wi-Fi</b><span id="wifi">–</span></div>
+      <div class="tile"><b>Storage free</b><span id="disk">–</span></div>
+      <div class="tile"><b>Focus</b><span id="focus">–</span></div>
+    </div>
+  </div>
+
+  </div>
+  <div class="card"><h2 style="margin-top:0">Changes</h2><div class="log" id="log"></div></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let lastKey = null;
+function fmt(v, d=1){ return (v===null||v===undefined) ? '–' : Number(v).toFixed(d); }
+async function cmd(c){
+  try{ await fetch('{{ url_for("admin_scope_cmd") }}', {method:'POST', headers:{'Content-Type':'application/json','X-Requested-With':'fetch'}, body: JSON.stringify({cmd:c})}); }catch(e){}
+  tick();
+}
+function dirText(err, kind){
+  if (err===null||err===undefined) return '';
+  if (Math.abs(err) <= 1) return 'good (under 1°)';
+  if (kind==='az') return err > 0 ? 'turn the head WEST (left, facing north)' : 'turn the head EAST (right, facing north)';
+  return err > 0 ? 'axis too high: lower the head scale by ' + Math.abs(err).toFixed(1) + '°' : 'axis too low: raise the head scale by ' + Math.abs(err).toFixed(1) + '°';
+}
+async function tick(){
+  let p;
+  try{ const r = await fetch('{{ url_for("admin_scope_json") }}', {cache:'no-store'}); if (r.redirected || !r.ok) { $('stateh').textContent='Signed out'; $('states').textContent='Reload the page and sign in again.'; return; } p = await r.json(); }catch(e){ $('stateh').textContent='Site not reachable'; $('states').textContent='Check your connection; this page retries on its own.'; return; }
+  const L = p.live || {}; const age = p.live_age;
+  const current = p.live_on && age !== null && age < 8;
+  const when = L.ts ? new Date(L.ts*1000).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : null;
+  const ago = age===null ? '' : (age < 90 ? Math.round(age) + ' s ago' : age < 5400 ? Math.round(age/60) + ' min ago' : Math.round(age/3600) + ' h ago');
+  const st = $('state'); const left = Math.max(0, Math.ceil((p.live_until - p.now)/60));
+  if (current && L.reachable === false){ st.className='state down'; $('stateh').textContent='Live, but the scope isn\'t answering'; $('states').textContent='Is it switched on? ' + (L.error||''); }
+  else if (current){ st.className='state live'; $('stateh').textContent='Live'; $('states').textContent='Updating every second · ' + left + ' min left'; }
+  else if (p.live_on){
+    const waited = p.now - (p.live_until - {{ window_min }}*60);
+    st.className='state wait';
+    $('stateh').textContent = waited < 20 ? 'Starting…' : 'Waiting for the laptop';
+    $('states').textContent = waited < 20 ? 'The laptop picks this up within a few seconds.' : 'No readings yet. The laptop next to the scope may be off or asleep.';
+  } else { st.className='state'; $('stateh').textContent='Not live'; $('states').textContent = when ? 'Showing the last reading, from ' + when + ' (' + ago + '). Press Start for current readings.' : 'No readings yet. Press Start.'; }
+  $('readings').className = 'readings' + (current ? '' : ' old');
+  $('oldtag').textContent = when ? 'Last known, from ' + when + ' — not current' : '';
+  $('b-live').textContent = p.live_on ? 'Add {{ window_min }} more min' : 'Start live status ({{ window_min }} min)';
+  $('b-stop').hidden = !p.live_on;
+  if (p.polar_requested) $('pastate').textContent = 'Polar alignment requested; the laptop will start it within a few seconds.';
+  if (!p.live) return;
+  if (L.reachable === false){
+    $('power').className='big'; $('power').innerHTML = 'SCOPE NOT ANSWERING<small>' + (L.error||'is it switched on?') + '</small>';
+  } else {
+    $('power').className = 'big ' + (L.charge_online ? 'ok' : 'bad');
+    $('power').innerHTML = (current ? '' : 'Last known: ') + (L.charge_online ? 'POWER IN' : 'NO POWER IN') + '<small>' + (L.charger_status||'') + '</small>';
+  }
+  $('batt').textContent = L.battery!=null ? L.battery + '%' : '–'; $('charger').textContent = L.charger_status || '';
+  $('btemp').textContent = L.battery_temp!=null ? L.battery_temp + ' °C' : '–'; $('temp').textContent = L.temp!=null ? fmt(L.temp) + ' °C' : '–';
+  if (L.tilt!=null){
+    $('tilt').textContent = fmt(L.tilt) + '°';
+    if (L.eq_mode){ const dv = L.tilt - (L.tilt_target||52.6); $('tilthint').textContent = Math.abs(dv)<=1 ? 'on target (' + fmt(L.tilt_target||52.6) + '°)' : (dv<0?'lean it ':'lean it less by ') + Math.abs(dv).toFixed(1) + '°' + (dv<0?' more':''); $('tilthint').className = Math.abs(dv)<=1?'good':'amber'; }
+    else { $('tilthint').textContent = L.tilt < 8 ? 'standing upright' : 'tilted; upright mode expects level'; $('tilthint').className=''; }
+  }
+  $('eq').textContent = L.eq_mode ? 'Tilted (EQ)' : 'Upright (alt-az)';
+  $('trk').textContent = (L.parked ? 'parked' : (L.tracking ? 'tracking the sky' : 'not tracking')) + (L.move_type && L.move_type!=='none' ? ' · moving' : '');
+  $('point').textContent = L.parked ? 'Folded (parked)' : (L.alt!=null ? fmt(L.alt) + '° up, ' + fmt(L.az,0) + '° az' : '–');
+  $('radec').textContent = (L.ra!=null && !L.parked) ? 'RA ' + fmt(L.ra,2) + 'h, Dec ' + fmt(L.dec,1) + '°' : '';
+  $('act').textContent = L.activity || '–'; $('actsub').textContent = L.target ? L.target : '';
+  $('frames').textContent = L.frames!=null ? L.frames : '–'; $('dropped').textContent = L.dropped!=null ? L.dropped + ' thrown out' : '';
+  $('wifi').textContent = L.wifi_dbm!=null ? L.wifi_dbm + ' dBm' : '–'; $('disk').textContent = L.storage_free_gb!=null ? L.storage_free_gb + ' GB' : '–';
+  $('focus').textContent = L.focus!=null ? L.focus : '–';
+  if (L.pa_state) $('pastate').textContent = L.pa_state;
+  const pa = p.pa;
+  if (!pa){ $('paat').textContent = 'not measured yet'; $('pazh').textContent = 'press Measure (at night, scope tilted)'; }
+  if (pa){
+    const paLive = pa.live && pa.ts && (p.now - pa.ts) < 20;
+    $('paat').innerHTML = paLive ? '<span class="good">● live, updated ' + Math.round(p.now - pa.ts) + ' s ago</span>' : 'measured ' + (p.pa_at_pac||'');
+    const ok = v => Math.abs(v) <= 1;
+    $('paz').textContent = Math.abs(pa.az_err).toFixed(1) + '°'; $('paz').className = 'v ' + (ok(pa.az_err)?'good':'badc'); $('pazh').textContent = dirText(pa.az_err,'az');
+    $('palt').textContent = Math.abs(pa.alt_err).toFixed(1) + '°'; $('palt').className = 'v ' + (ok(pa.alt_err)?'good':'badc'); $('palth').textContent = dirText(pa.alt_err,'alt');
+  }
+  if (L.reachable !== false){
+    const key = (L.charge_online?'power in':'no power') + ', ' + L.battery + '%' + (L.eq_mode ? ', tilt ' + fmt(L.tilt) : '');
+    if (key !== lastKey){ const t = new Date((L.ts||p.now)*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'}); $('log').textContent = t + '  ' + key + '\n' + $('log').textContent; lastKey = key; }
+  }
+}
+tick(); setInterval(tick, 1000);
+</script>
+{% endblock %}

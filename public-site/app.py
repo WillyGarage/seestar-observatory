@@ -490,6 +490,121 @@ def api_notice():
     return jsonify(ok=True, notice=out)
 
 
+# ---------- live scope panel (admin page <-> agent on the observing machine) ----------
+# The site never reaches the telescope. The agent next to the scope polls /api/scope/cmd,
+# and while a live window is open it posts readings to /api/scope/live. All of it lives in
+# site_state: scope_cmd (what the owner asked for), scope_live (latest readings),
+# scope_pa (last polar-alignment measurement).
+LIVE_WINDOW_MIN = 10
+
+
+def _state_json(conn, key):
+    raw_, updated = get_state(conn, key)
+    try:
+        return (json.loads(raw_) if raw_ else None), updated
+    except Exception:
+        return None, updated
+
+
+def _put_state(conn, key, value):
+    conn.execute("INSERT INTO site_state (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+                 (key, json.dumps(value), now_iso()))
+
+
+def scope_panel(conn):
+    cmd, _ = _state_json(conn, "scope_cmd")
+    live, live_at = _state_json(conn, "scope_live")
+    pa, pa_at = _state_json(conn, "scope_pa")
+    now = time.time()
+    cmd = cmd or {}
+    live_until = cmd.get("live_until") or 0
+    return {"now": now, "live_until": live_until, "live_on": live_until > now,
+            "polar_requested": bool(cmd.get("polar")), "live": live, "live_at": live_at,
+            "live_age": (now - live["ts"]) if live and live.get("ts") else None,
+            "pa": pa, "pa_at_pac": pac(pa_at, "%-I:%M %p") if pa_at else None}
+
+
+@app.route("/admin/scope")
+@require_admin
+def admin_scope():
+    return render_template("scope.html", active="admin", window_min=LIVE_WINDOW_MIN)
+
+
+@app.route("/admin/scope.json")
+@require_admin
+def admin_scope_json():
+    conn = db.get_db()
+    try:
+        return jsonify(scope_panel(conn))
+    finally:
+        conn.close()
+
+
+@app.route("/admin/scope/cmd", methods=["POST"])
+@require_admin
+def admin_scope_cmd():
+    what = request.form.get("cmd") or (request.get_json(silent=True) or {}).get("cmd")
+    conn = db.get_db()
+    cmd, _ = _state_json(conn, "scope_cmd"); cmd = cmd or {}
+    if what == "live":
+        cmd["live_until"] = time.time() + LIVE_WINDOW_MIN * 60
+    elif what == "stop":
+        cmd["live_until"] = 0; cmd["polar"] = False
+    elif what == "polar":
+        cmd["polar"] = True
+        cmd["live_until"] = max(cmd.get("live_until") or 0, time.time() + 30 * 60)   # adjusting takes a while
+    else:
+        conn.close(); return jsonify(error="bad cmd"), 400
+    cmd["requested_at"] = now_iso()
+    _put_state(conn, "scope_cmd", cmd); conn.commit()
+    out = scope_panel(conn); conn.close()
+    return jsonify(out)
+
+
+@app.route("/api/scope/cmd")
+@require_token
+def api_scope_cmd():
+    conn = db.get_db()
+    try:
+        cmd, _ = _state_json(conn, "scope_cmd"); cmd = cmd or {}
+        return jsonify(live_until=cmd.get("live_until") or 0, polar=bool(cmd.get("polar")), now=time.time())
+    finally:
+        conn.close()
+
+
+@app.route("/api/scope/cmd/polar-taken", methods=["POST"])
+@require_token
+def api_scope_polar_taken():
+    conn = db.get_db()
+    cmd, _ = _state_json(conn, "scope_cmd"); cmd = cmd or {}
+    cmd["polar"] = False
+    _put_state(conn, "scope_cmd", cmd); conn.commit(); conn.close()
+    return jsonify(ok=True)
+
+
+@app.route("/api/scope/live", methods=["POST"])
+@require_token
+def api_scope_live():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify(error="json object required"), 400
+    body["ts"] = time.time()
+    conn = db.get_db()
+    _put_state(conn, "scope_live", body); conn.commit(); conn.close()
+    return jsonify(ok=True)
+
+
+@app.route("/api/scope/pa", methods=["POST"])
+@require_token
+def api_scope_pa():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify(error="json object required"), 400
+    conn = db.get_db()
+    _put_state(conn, "scope_pa", body); conn.commit(); conn.close()
+    return jsonify(ok=True)
+
+
 @app.route("/api/status", methods=["POST"])
 @require_token
 def api_status():
