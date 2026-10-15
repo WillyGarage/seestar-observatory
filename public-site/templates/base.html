@@ -3,8 +3,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{% block title %}{{ site_title }}{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+<link rel="icon" href="{{ url_for('static', filename='icons/logo.svg') }}" type="image/svg+xml">
+<link rel="icon" href="{{ url_for('static', filename='icons/icon-32.png') }}" sizes="32x32">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-180.png') }}">
+<meta name="theme-color" content="#05081a">
 <header>
-  <h1><a href="{{ url_for('gallery') }}">Sky</a></h1>
+  <h1><a href="{{ url_for('gallery') }}"><img class="logo" src="{{ url_for('static', filename='icons/logo.svg') }}" alt="">Sky</a></h1>
   <div class="sub">{{ site_subtitle }}</div>
 </header>
 <nav class="top">
@@ -20,6 +25,9 @@
 </div></div>
 <div class="status {{ status.cls }}" id="banner" {{ 'hidden' if notice else '' }}><div class="in"><span class="dot"></span><span class="txt">{{ status.text }}</span><span class="when">{{ status.when }}</span></div></div>
 {% block body %}{% endblock %}
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+</script>
 <script>
 // Pages keep themselves current: poll /state every 25 s; update the banner in place and
 // re-render (or reload) when anything changed on the site. Polling, not push: waitress has a

@@ -220,6 +220,15 @@ def gallery():
     return render_template("gallery.html", items=items, active="gallery")
 
 
+@app.route("/sw.js")
+def service_worker():
+    """Served from the root so the app's service worker covers the whole site."""
+    r = app.send_static_file("sw.js")
+    r.headers["Cache-Control"] = "no-cache"
+    r.headers["Content-Type"] = "application/javascript"
+    return r
+
+
 @app.route("/how")
 def how():
     return render_template("how.html", active="how")

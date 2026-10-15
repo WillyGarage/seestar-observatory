@@ -29,15 +29,26 @@ def listdir(tree, path):
              FileAttributes.FILE_ATTRIBUTE_DIRECTORY, ShareAccess.FILE_SHARE_READ,
              CreateDisposition.FILE_OPEN, CreateOptions.FILE_DIRECTORY_FILE)
     out = []
-    for e in d.query_directory("*", FileInformationClass.FILE_DIRECTORY_INFORMATION):
-        name = e['file_name'].get_value().decode('utf-16-le')
-        if name in (".", ".."):
-            continue
-        attrs = e['file_attributes'].get_value()
-        out.append((name,
-                    bool(attrs & FileAttributes.FILE_ATTRIBUTE_DIRECTORY),
-                    e['end_of_file'].get_value(),
-                    e['last_write_time'].get_value()))
+    # One QUERY_DIRECTORY call returns only as many entries as fit in its buffer (~300 frame files);
+    # keep asking until the server says there are no more, or big *_sub folders get listed partially.
+    while True:
+        try:
+            batch = d.query_directory("*", FileInformationClass.FILE_DIRECTORY_INFORMATION, max_output=1048576)
+        except Exception as ex:
+            if "NO_MORE_FILES" in str(ex).upper() or "0x80000006" in str(ex) or "NoMoreFiles" in type(ex).__name__:
+                break
+            raise
+        if not batch:
+            break
+        for e in batch:
+            name = e['file_name'].get_value().decode('utf-16-le')
+            if name in (".", ".."):
+                continue
+            attrs = e['file_attributes'].get_value()
+            out.append((name,
+                        bool(attrs & FileAttributes.FILE_ATTRIBUTE_DIRECTORY),
+                        e['end_of_file'].get_value(),
+                        e['last_write_time'].get_value()))
     d.close()
     return out
 

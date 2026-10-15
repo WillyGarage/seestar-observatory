@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs><radialGradient id="bg" cx="50%" cy="50%" r="75%"><stop offset="0" stop-color="#141b3d"/><stop offset="1" stop-color="#05081a"/></radialGradient>
+<radialGradient id="r" cx="40%" cy="45%" r="45%"><stop offset="0" stop-color="#ff5a5f" stop-opacity=".95"/><stop offset=".6" stop-color="#c2185b" stop-opacity=".45"/><stop offset="1" stop-color="#c2185b" stop-opacity="0"/></radialGradient>
+<radialGradient id="t" cx="62%" cy="58%" r="42%"><stop offset="0" stop-color="#3ee0d0" stop-opacity=".9"/><stop offset=".6" stop-color="#1a8fb0" stop-opacity=".4"/><stop offset="1" stop-color="#1a8fb0" stop-opacity="0"/></radialGradient>
+<filter id="blur"><feGaussianBlur stdDeviation="18"/></filter></defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<g filter="url(#blur)"><ellipse cx="210" cy="230" rx="170" ry="120" fill="url(#r)" transform="rotate(-25 210 230)"/><ellipse cx="310" cy="300" rx="160" ry="110" fill="url(#t)" transform="rotate(-25 310 300)"/></g>
+<g fill="#fff"><circle cx="256" cy="256" r="16"/></g>
+<path d="M256 256 l0 -60 M256 256 l0 60 M256 256 l-60 0 M256 256 l60 0" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+<circle cx="256" cy="256" r="34" fill="#fff" opacity=".18"/>
+<g fill="#fff"><circle cx="110" cy="110" r="3"/><circle cx="400" cy="130" r="2.5"/><circle cx="420" cy="400" r="3"/><circle cx="90" cy="380" r="2"/><circle cx="350" cy="420" r="2"/></g>
+</svg>

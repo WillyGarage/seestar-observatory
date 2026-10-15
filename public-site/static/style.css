@@ -4,7 +4,8 @@ body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,s
      background:#f6f7f9;color:#1b1d21}
 header{padding:20px 20px 12px;max-width:1200px;margin:0 auto}
 h1{margin:0 0 4px;font-size:22px;font-weight:650;letter-spacing:-.01em}
-h1 a{color:inherit;text-decoration:none}
+h1 a{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:9px}
+h1 .logo{width:30px;height:30px;border-radius:8px;display:block}
 .sub{color:#697080;font-size:13px}
 nav.top{max-width:1200px;margin:0 auto;padding:0 20px 14px;display:flex;gap:14px}
 nav.top a{color:#4a5160;font-size:13px;text-decoration:none;padding:5px 0;border-bottom:2px solid transparent}

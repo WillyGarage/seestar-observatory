@@ -29,7 +29,7 @@ FILES = [
     "app.py", "db.py", "requirements.txt", "Dockerfile", "docker-compose.yml", ".dockerignore",
     "README.md", "SPEC.md", "deploy/nginx.conf.example", "deploy/deploy.py",
 ]
-GLOBS = ["templates/*.html", "static/*"]
+GLOBS = ["templates/*.html", "static/*.*", "static/icons/*"]
 REMOVE = ["seed.py"]   # files that used to ship and must not linger on the box
 
 
