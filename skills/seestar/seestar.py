@@ -634,6 +634,7 @@ def cmd_gallery(a):
         if a.featured: args.append("--featured")
         if a.private: args.append("--private")
         args += ["--credit", a.credit]
+        if a.kind: args += ["--kind", a.kind]
     subprocess.run([sys.executable, str(SKILL_DIR / "gallery.py"), *args], check=True)
 
 
@@ -713,10 +714,11 @@ def main():
     sp.add_parser("shutdown", help="power the scope off (cannot be powered on remotely)").set_defaults(fn=cmd_shutdown)
     p = sp.add_parser("publish", help="copy image(s) to the publish host and print the URL"); p.add_argument("files", nargs="+"); p.set_defaults(fn=cmd_publish)
     p = sp.add_parser("pull", help="copy the scope's own finished stacks (jpg + 16-bit .fit) into captures/scope/"); p.set_defaults(fn=cmd_pull)
-    p = sp.add_parser("gallery", help="galleries: add FILE... [--featured] [--credit NAME|AI] [--private] | build | publish | sync"); p.add_argument("action", choices=["add", "build", "publish", "sync"]); p.add_argument("files", nargs="*")
+    p = sp.add_parser("gallery", help="galleries: add FILE... --kind TYPE [--featured] [--credit NAME|AI] [--private] | build | publish | sync"); p.add_argument("action", choices=["add", "build", "publish", "sync"]); p.add_argument("files", nargs="*")
     p.add_argument("--featured", action="store_true", help="add: show on the public gallery page (default: stored on the public site but hidden)")
     p.add_argument("--credit", default="AI", help="add: who asked for it - a person's name or AI (default AI); a request's submitter overrides via request_id")
     p.add_argument("--private", action="store_true", help="add: keep off the public site entirely")
+    p.add_argument("--kind", default="", help="add: Sun, Moon, Planets, Nebulae, Planetary nebulae, Supernova remnants, Galaxies, Star clusters or Satellites (publish refuses pictures without one)")
     p.add_argument("--public", action="store_true", help="add: (default, kept for old scripts)"); p.set_defaults(fn=cmd_gallery)
     p = sp.add_parser("rpc", help="call any scope JSON-RPC method: rpc <method> [k=v ...] e.g. rpc pi_output_set2 is_dew_on=True dew_heater_power=70"); p.add_argument("method"); p.add_argument("kv", nargs="*"); p.set_defaults(fn=cmd_rpc)
     p = sp.add_parser("requests", help="the public site private inbox: pull unapproved requests | set a request's status")

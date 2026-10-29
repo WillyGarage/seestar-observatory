@@ -10,6 +10,7 @@ import json
 import os
 import secrets
 import time
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -164,6 +165,14 @@ def notice_view(conn):
     return {"heading": n.get("heading") or "", "body": n.get("body") or "", "cls": n.get("cls") or "warn"}
 
 
+def photo_types():
+    """The fixed list of photo types and their groups (static/photo_types.json, shared with the gallery tool)."""
+    try:
+        return json.loads((Path(__file__).resolve().parent / "static" / "photo_types.json").read_text())
+    except Exception:
+        return {"groups": [], "internal": []}
+
+
 def gallery_items(conn):
     vid = voter_id()
     rows = conn.execute("""
@@ -216,8 +225,9 @@ def require_admin(fn):
 def gallery():
     conn = db.get_db()
     items = gallery_items(conn)
+    now = now_view(conn)
     conn.close()
-    return render_template("gallery.html", items=items, active="gallery")
+    return render_template("gallery.html", items=items, active="gallery", now=now, types=photo_types())
 
 
 @app.route("/sw.js")
@@ -232,6 +242,11 @@ def service_worker():
 @app.route("/how")
 def how():
     return render_template("how.html", active="how")
+
+
+@app.route("/build")
+def build():
+    return render_template("build.html", active="build")
 
 
 @app.route("/gallery.json")
@@ -555,8 +570,8 @@ def admin_scope_cmd():
     what = request.form.get("cmd") or (request.get_json(silent=True) or {}).get("cmd")
     conn = db.get_db()
     cmd, _ = _state_json(conn, "scope_cmd"); cmd = cmd or {}
-    if what == "live":
-        cmd["live_until"] = time.time() + LIVE_WINDOW_MIN * 60
+    if what == "live":     # the open page repeats this every minute; never shortens a longer window
+        cmd["live_until"] = max(cmd.get("live_until") or 0, time.time() + LIVE_WINDOW_MIN * 60)
     elif what == "stop":
         cmd["live_until"] = 0; cmd["polar"] = False
     elif what == "polar":
@@ -620,12 +635,68 @@ def api_status():
     body = request.get_json(silent=True) or {}
     if body.get("state") not in ("imaging", "processing", "clouded", "daylight", "offline", "idle"):
         return jsonify(error="bad state"), 400
-    body.setdefault("since", now_iso())
     conn = db.get_db()
+    prev, _ = _state_json(conn, "status"); prev = prev or {}
+    same = prev.get("state") == body["state"] and (prev.get("detail") or "") == (body.get("detail") or "")
+    # a night script re-posts the same status at every block: keep "since" (when this target began) and
+    # don't make every open page refresh for a status that hasn't changed
+    body.setdefault("since", prev.get("since") if same and prev.get("since") else now_iso())
     conn.execute("INSERT INTO site_state (key, value, updated_at) VALUES ('status', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
                  (json.dumps(body), now_iso()))
-    bump(conn); conn.commit(); conn.close()
+    if not same:
+        bump(conn)
+    conn.commit(); conn.close()
     return jsonify(ok=True)
+
+
+@app.route("/api/scope/progress", methods=["POST"])
+@require_token
+def api_scope_progress():
+    """Frame counts while stacking, from the agent next to the scope (every ~20 s). A target is shot in blocks
+    (one scope folder each), so counts are kept per block and summed for as long as the status is unchanged."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not body.get("block"):
+        return jsonify(error="json object with block required"), 400
+    conn = db.get_db()
+    st, _ = _state_json(conn, "status"); st = st or {}
+    key = f"{st.get('state')}|{st.get('detail')}|{st.get('since')}"
+    prog, _ = _state_json(conn, "scope_progress")
+    if not prog or prog.get("key") != key:
+        prog = {"key": key, "blocks": {}}
+    try:
+        prog["blocks"][str(body["block"])[:120]] = [int(body.get("frames") or 0), float(body.get("exp_s") or 0), int(body.get("dropped") or 0)]
+    except (TypeError, ValueError):
+        conn.close(); return jsonify(error="bad numbers"), 400
+    prog["ts"] = time.time()
+    _put_state(conn, "scope_progress", prog); conn.commit(); conn.close()
+    return jsonify(ok=True)
+
+
+def now_view(conn):
+    """What the public 'now photographing' card shows. Only while the status says imaging and is fresh."""
+    sv = status_view(conn)
+    if sv["cls"] != "imaging":
+        return {"active": False}
+    st, _ = _state_json(conn, "status"); st = st or {}
+    if st.get("state") != "imaging":
+        return {"active": False}
+    out = {"active": True, "what": st.get("detail") or "", "since": st.get("since"), "since_pac": pac(st.get("since"), "%-I:%M %p")}
+    prog, _ = _state_json(conn, "scope_progress")
+    key = f"{st.get('state')}|{st.get('detail')}|{st.get('since')}"
+    if prog and prog.get("key") == key and time.time() - prog.get("ts", 0) < 600:
+        b = prog["blocks"].values()
+        out.update(frames=sum(x[0] for x in b), light_min=round(sum(x[0] * x[1] for x in b) / 60),
+                   updated_ago=round(time.time() - prog["ts"]))
+    return out
+
+
+@app.route("/now.json")
+def now_json():
+    conn = db.get_db()
+    try:
+        r = jsonify(now_view(conn)); r.headers["Cache-Control"] = "no-store"; return r
+    finally:
+        conn.close()
 
 
 @app.route("/api/requests")

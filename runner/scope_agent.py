@@ -67,7 +67,7 @@ def api(method, path, body=None, timeout=6):
 
 import threading
 SCOPE_LOCK = threading.RLock()
-STATE = {"pa_state": None, "live_until": 0, "now_offset": 0.0}
+STATE = {"pa_state": None, "pa_hint": None, "live_until": 0, "now_offset": 0.0}
 
 
 def q(fn, *a, **kw):
@@ -87,8 +87,8 @@ def read_scope(extra=None):
         pi, mnt = st["pi_status"], st["mount"]
         out.update(battery=pi.get("battery_capacity"), charge_online=pi.get("charge_online"),
                    charger_status=pi.get("charger_status"), battery_temp=pi.get("battery_temp"),
-                   temp=round(pi.get("temp", 0), 1), tilt=round(st["balance_sensor"]["data"]["angle"], 1),
-                   tilt_target=TILT_TARGET, eq_mode=mnt.get("equ_mode"), tracking=mnt.get("tracking"),
+                   temp=round(pi.get("temp", 0), 1), tilt=round(st["balance_sensor"]["data"]["angle"], 2),
+                   tilt_target=TILT_TARGET, lat=LAT, eq_mode=mnt.get("equ_mode"), tracking=mnt.get("tracking"),
                    move_type=mnt.get("move_type"), parked=mnt.get("close"),
                    wifi_dbm=(st.get("station") or {}).get("sig_lev"),
                    focus=(st.get("focuser") or {}).get("step"))
@@ -219,6 +219,10 @@ def polar(post):
     v = q(raw.get_view_state).get("result", {}).get("View", {})
     if v.get("state") == "working" and v.get("stage") == "Stack":
         post("The scope is photographing. Stop that first, then measure."); return None
+    sun = SITE.at(TS.now()).observe(EPH["sun"]).apparent().altaz()[0].degrees
+    if sun > -11.5:
+        post(f"Too light for the star measurement (sun {abs(sun):.0f}° {'down' if sun < 0 else 'up'}). It works once the sun is about 12° down.")
+        return None
     if d.get("close"):
         post("Opening the arm and pointing up…")
         q(raw.scope_move_to_horizon); wait_still()
@@ -268,7 +272,8 @@ def polar(post):
         res["tilt_at"] = round(t0, 2); res["tilt_c"] = round(res["axis_alt"] - (90 - t0), 2)   # axis_alt = 90 - tilt + c
     except Exception:
         pass
-    post(f"Done: left/right {abs(res['az_err']):.1f}°, up/down {abs(res['alt_err']):.1f}°. Live updates follow as you adjust.")
+    res["measured_ts"] = time.time(); res["measured_total"] = res["total"]
+    post(f"Measured: left/right {abs(res['az_err']):.1f}°, up/down {abs(res['alt_err']):.1f}°. Adjust now; numbers update live.")
     return res
 
 
@@ -292,7 +297,8 @@ def polar_live(res, keep_going, post):
         cur = fast_solve()
         if cur is None:
             misses += 1
-            STATE["pa_state"] = "Re-finding stars… hold the head still for a moment." if misses > 1 else STATE["pa_state"]
+            if misses > 1:
+                STATE["pa_state"], STATE["pa_hint"] = "Hold the head still for a moment: re-finding stars.", "Numbers resume in a few seconds."
             continue
         misses = 0
         p_ref = unit(*altaz_now(*ref)); p_cur = unit(*altaz_now(*cur))
@@ -305,7 +311,7 @@ def polar_live(res, keep_going, post):
             Path("/tmp/seestar_pa_latest.json").write_text(json.dumps(live))
         except Exception:
             pass
-        STATE["pa_state"] = f"Adjusting: left/right {abs(live['az_err']):.1f}°, up/down {abs(live['alt_err']):.1f}°"
+        STATE["pa_state"], STATE["pa_hint"] = "Adjust now: numbers update live.", "Small turns, then hold still about 5 s."
         try:
             api("POST", "/api/scope/pa", live, timeout=4)
         except Exception:
@@ -323,7 +329,7 @@ def feeder():
         if STATE["live_until"] > time.time():
             t0 = time.time()
             try:
-                extra = {"pa_state": STATE["pa_state"]} if STATE["pa_state"] else None
+                extra = {"pa_state": STATE["pa_state"], "pa_hint": STATE["pa_hint"]} if STATE["pa_state"] else None
                 api("POST", "/api/scope/live", read_scope(extra), timeout=5); fails = 0
             except Exception as ex:
                 fails += 1
@@ -334,11 +340,33 @@ def feeder():
             time.sleep(0.5)
 
 
+def progress():
+    """While the scope stacks, post its frame count every ~20 s for the public site's "now photographing" card.
+    Only reads the scope; posts nothing when it isn't stacking."""
+    last, exp_of = None, {}
+    while True:
+        try:
+            v = q(raw.get_view_state).get("result", {}).get("View", {})
+            stk = v.get("Stack") or {}
+            name = v.get("target_name")
+            if v.get("state") == "working" and v.get("stage") == "Stack" and name:
+                if name not in exp_of:
+                    exp_of[name] = (q(raw.get_setting).get("result", {}).get("exp_ms") or {}).get("stack_l", 0) / 1000
+                body = {"block": name, "frames": stk.get("stacked_frame") or 0, "dropped": stk.get("dropped_frame") or 0,
+                        "exp_s": exp_of[name]}
+                if body != last:
+                    api("POST", "/api/scope/progress", body, timeout=6); last = body
+        except Exception:
+            pass
+        time.sleep(20)
+
+
 def main():
     if CFG is None:
         raise SystemExit("no site config (~/.config/seestar/public-site.env)")
     log("scope agent up; site", CFG["url"])
     threading.Thread(target=feeder, daemon=True).start()
+    threading.Thread(target=progress, daemon=True).start()
     pa_state = None; site_fail = 0
     while True:
         try:
@@ -357,6 +385,7 @@ def main():
                 pass
             def post(text):
                 STATE["pa_state"] = text; log("polar:", text)
+                STATE["pa_hint"] = "Hands off the scope: it moves by itself while it measures." if text.startswith(("Opening", "Looking", "No stars", "Turning", "Star photo")) else None
             try:
                 res = polar(post)
                 if res:
@@ -375,7 +404,7 @@ def main():
                 post(f"Polar measurement failed: {str(ex)[:100]}")
             continue
         if not live:
-            STATE["pa_state"] = None
+            STATE["pa_state"] = STATE["pa_hint"] = None
         time.sleep(2.0 if live else IDLE_POLL)
 
 

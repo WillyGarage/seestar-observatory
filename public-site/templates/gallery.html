@@ -1,5 +1,39 @@
 {% extends "base.html" %}
 {% block body %}
+<style>
+.nowcard{max-width:1200px;margin:4px auto 10px;padding:0 20px}
+.nowcard .in{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #cfe9d8;border-radius:12px;padding:12px 16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.nowcard .pulse{width:11px;height:11px;border-radius:50%;background:#2f9e5b;flex:none;box-shadow:0 0 0 0 rgba(47,158,91,.5);animation:nowp 2s infinite}
+@keyframes nowp{0%{box-shadow:0 0 0 0 rgba(47,158,91,.45)}70%{box-shadow:0 0 0 9px rgba(47,158,91,0)}100%{box-shadow:0 0 0 0 rgba(47,158,91,0)}}
+.nowcard .k{font-size:12px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;color:#2f9e5b}
+.nowcard .w{font-size:19px;font-weight:700;line-height:1.25;color:#1b1d21}
+.nowcard .d{font-size:13.5px;color:#4a5160;margin-top:2px}
+</style>
+<div class="nowcard" id="nowcard" {{ '' if now and now.active else 'hidden' }}><div class="in">
+  <span class="pulse" aria-hidden="true"></span>
+  <div><div class="k">Live: the telescope is photographing</div>
+  <div class="w" id="noww">{{ (now.what[:1]|upper ~ now.what[1:]) if now and now.active else '' }}</div>
+  <div class="d" id="nowd"></div></div>
+</div></div>
+<script>
+(function(){
+  const card = document.getElementById('nowcard'), banner = document.getElementById('banner');
+  function show(n){
+    const on = !!(n && n.active);
+    card.hidden = !on;
+    if (banner) banner.style.display = on ? 'none' : '';      // the card says it better than the one-line banner
+    if (!on) return;
+    document.getElementById('noww').textContent = n.what ? n.what[0].toUpperCase() + n.what.slice(1) : 'Something in the night sky';
+    const bits = [];
+    if (n.since) bits.push('since ' + new Date(n.since).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}));
+    if (n.frames != null) bits.push(n.frames.toLocaleString() + ' frames' + (n.light_min ? ' (' + (n.light_min >= 90 ? (n.light_min/60).toFixed(1) + ' h' : n.light_min + ' min') + ' of light so far)' : ''));
+    document.getElementById('nowd').textContent = bits.join(' · ');
+  }
+  async function tick(){ try{ const r = await fetch('/now.json', {cache:'no-store'}); if (r.ok) show(await r.json()); }catch(_){} }
+  show({{ now | tojson }}); setInterval(tick, 15000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+})();
+</script>
 <div class="bar"><div class="in">
   <label for="sort">Sort</label>
   <select id="sort">
@@ -9,16 +43,27 @@
     <option value="title-desc">Name Z-A</option>
     <option value="object-asc">Object A-Z</option>
     <option value="bytes-desc">Largest file</option>
+    <option value="kind-asc">Type</option>
   </select>
-  <select id="kind"><option value="">All types</option></select>
+  <select id="kind" title="Type of object"><option value="">All types</option></select>
   <input id="q" type="search" placeholder="Search" style="flex:1;min-width:120px">
   <button id="bgrid" class="on">Grid</button>
   <button id="blist">List</button>
 </div></div>
+<div class="kindinfo" id="kindinfo" hidden></div>
 <div class="grid" id="grid"></div>
+<style>
+#kind{max-width:min(320px,100%);text-overflow:ellipsis}
+.kindinfo{max-width:1200px;margin:2px auto 8px;padding:0 20px;font-size:14px;color:#4a5160}
+.kindinfo b{color:#1b1d21}
+#list th{cursor:pointer;user-select:none;white-space:nowrap}
+#list th:hover{color:#1b1d21}
+#list th .ar{display:inline-block;width:1em;margin-left:3px;color:#8a92a0;font-size:11px}
+#list th.on .ar{color:#1b1d21}
+</style>
 <table id="list" hidden><thead><tr>
-  <th data-k="title">Name</th><th data-k="object">Object</th><th data-k="kind">Type</th>
-  <th data-k="taken">Taken</th><th data-k="frames">Frames</th><th data-k="width">Size</th><th data-k="bytes">File</th>
+  <th data-k="title">Name<span class="ar"></span></th><th data-k="object">Object<span class="ar"></span></th><th data-k="kind">Type<span class="ar"></span></th>
+  <th data-k="taken">Taken<span class="ar"></span></th><th data-k="frames">Frames<span class="ar"></span></th><th data-k="pixels">Size<span class="ar"></span></th><th data-k="bytes">File<span class="ar"></span></th>
 </tr></thead><tbody></tbody></table>
 <div id="lb"><img><div class="cap"></div></div>
 <script>
@@ -28,19 +73,51 @@ const fdate = s => new Date(s).toLocaleString([], {year:'numeric',month:'short',
 const fsize = b => b > 1e6 ? (b/1048576).toFixed(1)+' MB' : Math.round(b/1024)+' KB';
 const esc = s => (s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-[...new Set(ITEMS.map(i=>i.kind).filter(Boolean))].sort().forEach(k=>{
-  const o=document.createElement('option'); o.value=o.textContent=k; $('#kind').append(o);
-});
+// Types come from static/photo_types.json: groups (Solar system, Deep sky, Other) of types, each with a plain description
+const TYPES = {{ types | tojson }};
+const GROUP_OF = {}, ABOUT = {}, ORDER = {};
+let nT = 0;
+TYPES.groups.forEach(g => g.types.forEach(ty => { GROUP_OF[ty.name] = g.name; ABOUT[ty.name] = ty.about; ORDER[ty.name] = nT++; }));
+function buildKinds(){
+  const cur = $('#kind').value, count = k => ITEMS.filter(i => i.kind === k).length;
+  $('#kind').innerHTML = '<option value="">All types</option>';
+  TYPES.groups.forEach(g => {
+    const og = document.createElement('optgroup'); og.label = g.name;
+    const n = g.types.reduce((s, ty) => s + count(ty.name), 0);
+    if (g.types.length > 1) {                 // a one-type group (Other: Satellites) needs no "All ..." entry
+      const all = document.createElement('option'); all.value = 'g:' + g.name;
+      all.textContent = `All ${g.name.toLowerCase()}: ${g.about} (${n})`; og.append(all);
+    }
+    g.types.forEach(ty => {
+      const o = document.createElement('option'); o.value = 't:' + ty.name;
+      o.textContent = `${ty.name}: ${ty.about} (${count(ty.name)})`; og.append(o);
+    });
+    $('#kind').append(og);
+  });
+  $('#kind').value = cur;
+}
+function kindInfo(){
+  const v = $('#kind').value, box = $('#kindinfo');
+  if (!v) { box.hidden = true; return; }
+  const name = v.slice(2), g = TYPES.groups.find(x => x.name === name);
+  box.innerHTML = v[0] === 'g' ? `<b>${esc(name)}</b>: ${esc(g ? g.about : '')}` : `<b>${esc(name)}</b>: ${esc(ABOUT[name] || '')}`;
+  box.hidden = false;
+}
+buildKinds();
+ITEMS.forEach(i => i.pixels = (i.width || 0) * (i.height || 0));
 
 function sorted(){
   const [k,dir] = $('#sort').value.split('-');
   const q = $('#q').value.trim().toLowerCase();
   const kind = $('#kind').value;
-  let a = ITEMS.filter(i => (!kind || i.kind===kind) &&
-    (!q || (i.title+' '+i.object+' '+i.kind+' '+i.notes).toLowerCase().includes(q)));
+  const okKind = i => !kind || (kind[0]==='g' ? GROUP_OF[i.kind]===kind.slice(2) : i.kind===kind.slice(2));
+  let a = ITEMS.filter(i => okKind(i) &&
+    (!q || [i.title, i.object, i.kind, GROUP_OF[i.kind], ABOUT[i.kind], i.notes].join(' ').toLowerCase().includes(q)));
   a.sort((x,y)=>{
     let p=x[k], r=y[k];
-    if(p==null)p=''; if(r==null)r='';
+    if(k==='kind'){ p=ORDER[p]??99; r=ORDER[r]??99; }
+    const pe = p==null||p==='', re = r==null||r==='';          // blanks always go last, whichever direction
+    if(pe||re) return pe&&re ? 0 : (pe ? 1 : -1);
     const c = typeof p==='number'&&typeof r==='number' ? p-r : String(p).localeCompare(String(r));
     return dir==='desc' ? -c : c;
   });
@@ -72,19 +149,33 @@ function render(){
     <tr><td class="n"><a href="/full/${i.filename}">${i.title}</a></td><td>${i.object}</td><td>${i.kind}</td>
     <td>${fdate(i.taken)}</td><td>${i.frames??''}</td>
     <td>${i.width}&times;${i.height}</td><td>${fsize(i.bytes)}</td></tr>`).join('');
+  arrows();
 }
 
-$('#sort').onchange = $('#kind').onchange = render;
+$('#sort').onchange = render;
+$('#kind').onchange = () => { kindInfo(); render(); };
 $('#q').oninput = render;
+// List view: every column header sorts; click again to reverse. The Sort menu follows along.
+const COL = {title:'Name', object:'Object', kind:'Type', taken:'Date', frames:'Frames', pixels:'Size', bytes:'File size'};
+const FIRST_DESC = {taken:1, frames:1, pixels:1, bytes:1};       // numbers and dates start biggest/newest first
 document.querySelectorAll('#list th').forEach(th=>th.onclick=()=>{
-  const k = th.dataset.k, cur = $('#sort').value;
-  $('#sort').value = cur === k+'-asc' ? k+'-desc' : k+'-asc';
-  if(![...$('#sort').options].some(o=>o.value===$('#sort').value)){
-    const o=document.createElement('option'); o.value=o.textContent=$('#sort').value; $('#sort').append(o);
-    $('#sort').value=o.value;
+  const k = th.dataset.k, [ck, cd] = $('#sort').value.split('-');
+  const dir = ck === k ? (cd === 'asc' ? 'desc' : 'asc') : (FIRST_DESC[k] ? 'desc' : 'asc');
+  const v = k + '-' + dir;
+  if(![...$('#sort').options].some(o=>o.value===v)){
+    const o=document.createElement('option'); o.value=v;
+    o.textContent = COL[k] + (dir==='asc' ? (FIRST_DESC[k] ? ', smallest first' : ', A-Z') : (FIRST_DESC[k] ? ', biggest first' : ', Z-A'));
+    $('#sort').append(o);
   }
-  render();
+  $('#sort').value = v; render();
 });
+function arrows(){
+  const [k, d] = $('#sort').value.split('-');
+  document.querySelectorAll('#list th').forEach(th => {
+    const on = th.dataset.k === k; th.classList.toggle('on', on);
+    th.querySelector('.ar').textContent = on ? (d === 'asc' ? '\u25B2' : '\u25BC') : '';
+  });
+}
 function view(v){
   const l = v==='list';
   $('#grid').hidden=l; $('#list').hidden=!l;
@@ -129,7 +220,7 @@ $('#lb').onclick = e => { if(e.target.tagName!=='A') $('#lb').classList.remove('
 addEventListener('keydown', e => e.key==='Escape' && $('#lb').classList.remove('open'));
 render();
 window.onSiteChange = async () => {
-  try { const r = await fetch('/gallery.json', {cache:'no-store'}); if(r.ok){ ITEMS = await r.json(); render(); } } catch(_) {}
+  try { const r = await fetch('/gallery.json', {cache:'no-store'}); if(r.ok){ ITEMS = await r.json(); ITEMS.forEach(i => i.pixels = (i.width || 0) * (i.height || 0)); buildKinds(); render(); } } catch(_) {}
 };
 </script>
 {% endblock %}

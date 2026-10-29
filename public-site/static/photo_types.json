@@ -1,0 +1,23 @@
+{
+  "groups": [
+    {"name": "Solar system", "about": "the Sun, the Moon and the planets",
+     "types": [
+       {"name": "Sun", "about": "our star"},
+       {"name": "Moon", "about": "our nearest neighbour, about 384,000 km away"},
+       {"name": "Planets", "about": "the planets that orbit the Sun"}
+     ]},
+    {"name": "Deep sky", "about": "everything far beyond the solar system",
+     "types": [
+       {"name": "Nebulae", "about": "glowing clouds of gas where new stars form"},
+       {"name": "Planetary nebulae", "about": "shells of gas thrown off by dying stars"},
+       {"name": "Supernova remnants", "about": "wreckage of stars that exploded"},
+       {"name": "Galaxies", "about": "other galaxies of billions of stars, millions of light years away"},
+       {"name": "Star clusters", "about": "families of stars born together"}
+     ]},
+    {"name": "Other", "about": "things closer to home",
+     "types": [
+       {"name": "Satellites", "about": "spacecraft in orbit around Earth"}
+     ]}
+  ],
+  "internal": ["Site survey", "AI-enhanced"]
+}

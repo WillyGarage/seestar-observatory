@@ -275,6 +275,31 @@ def publish():
     push_public()
 
 
+TYPES_FILE = Path(__file__).resolve().parents[2] / "public-site" / "static" / "photo_types.json"
+
+
+def photo_types():
+    """(public types, internal types) from the site's fixed list; internal ones may only be stored hidden."""
+    d = json.loads(TYPES_FILE.read_text())
+    return [t["name"] for g in d["groups"] for t in g["types"]], d.get("internal", [])
+
+
+def check_kinds(meta):
+    """Every picture that goes to the site needs a type from the fixed list (2026-10-25, Bill: future shots must be
+    categorised properly). Raises with the list of offenders so nothing half-labelled is published."""
+    public, internal = photo_types(); bad = []
+    for name, m in meta.items():
+        if m.get("public") is False:
+            continue
+        k = m.get("kind") or ""
+        if k in public or (k in internal and not m.get("featured")):
+            continue
+        bad.append(f"{name}: kind {k!r}")
+    if bad:
+        raise SystemExit("not published - these pictures need a type from " + str(TYPES_FILE.name) + " " + str(public) +
+                         ":\n  " + "\n  ".join(bad))
+
+
 def push_public():
     """Upload every gallery item to the public site. The site STORES everything (tests,
     full-frame versions, site surveys included) and DISPLAYS only featured items. An item
@@ -285,6 +310,7 @@ def push_public():
         print("public-site not configured (~/.config/seestar/public-site.env missing) — skipping public push")
         return
     meta = load_meta()
+    check_kinds(meta)
     pushed = 0
     for name, m in meta.items():
         if m.get("public") is False or m.get("published_public"):
@@ -311,6 +337,7 @@ def sync_public():
         print("public-site not configured — nothing to sync")
         return
     meta = load_meta()
+    check_kinds(meta)
     n = 0
     for name, m in meta.items():
         pid = m.get("public_id")
@@ -326,7 +353,7 @@ def sync_public():
     print(f"public sync: {n} updated")
 
 
-def add(paths, public=True, featured=False, credit="AI"):
+def add(paths, public=True, featured=False, credit="AI", kind=""):
     meta = load_meta()
     for p in paths:
         p = Path(p)
@@ -339,6 +366,10 @@ def add(paths, public=True, featured=False, credit="AI"):
         })
         m["credit"] = credit
         m["featured"] = bool(featured)
+        if kind:
+            if kind not in sum(photo_types(), []):
+                raise SystemExit(f"unknown type {kind!r}; choose from {photo_types()[0]}")
+            m["kind"] = kind
         if not public:
             m["public"] = False
         else:
@@ -357,9 +388,11 @@ if __name__ == "__main__":
     ap.add_argument("--private", action="store_true", help="add: keep the file off the public site entirely")
     ap.add_argument("--featured", action="store_true", help="add: show it on the public gallery page (default: stored but hidden)")
     ap.add_argument("--credit", default="AI", help="add: who asked for the picture - a person's name or 'AI' (default AI)")
+    ap.add_argument("--kind", default="", help="add: type from public-site/static/photo_types.json (Sun, Moon, Planets, Nebulae, "
+                    "Planetary nebulae, Supernova remnants, Galaxies, Star clusters, Satellites); publish refuses pictures without one")
     a = ap.parse_args()
     if a.action == "add":
-        add(a.files, public=not a.private, featured=a.featured, credit=a.credit)
+        add(a.files, public=not a.private, featured=a.featured, credit=a.credit, kind=a.kind)
     elif a.action == "sync":
         sync_public()
     else:

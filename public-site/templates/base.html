@@ -17,6 +17,7 @@
   <a href="{{ url_for('request_form') }}" class="{{ 'on' if active=='request' else '' }}">Request a photo</a>
   <a href="{{ url_for('queue') }}" class="{{ 'on' if active=='queue' else '' }}">Queue</a>
   <a href="{{ url_for('how') }}" class="{{ 'on' if active=='how' else '' }}">How it works</a>
+  <a href="{{ url_for('build') }}" class="{{ 'on' if active=='build' else '' }}">Build it</a>
   {% if is_admin %}<a href="{{ url_for('admin') }}" class="{{ 'on' if active=='admin' else '' }}">Admin</a>{% endif %}
 </nav>
 <div class="sitenotice {{ notice.cls if notice else '' }}" id="notice" {{ '' if notice else 'hidden' }}><div class="in">

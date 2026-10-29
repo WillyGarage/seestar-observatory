@@ -2,161 +2,215 @@
 {% block title %}Scope live · {{ site_title }}{% endblock %}
 {% block body %}
 <style>
-.sc{max-width:760px;margin:0 auto;padding:0 16px 60px}
-.sc h2{font-size:16px;margin:18px 0 10px}
-.sc .card{padding:16px 18px;margin-bottom:14px;overflow:visible}
-.sc .bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.sc .bar2 button{padding:9px 14px;font-size:14px}
-.big{border-radius:12px;padding:20px 14px;text-align:center;color:#fff;font-weight:750;font-size:26px;background:#9aa3b2}
-.big.ok{background:#1f9d55}.big.bad{background:#c53030}
-.big small{display:block;font-size:14px;font-weight:500;opacity:.92;margin-top:4px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.tile{background:#f6f7f9;border-radius:9px;padding:11px 12px}
-.tile b{display:block;font-size:12px;color:#697080;font-weight:600}
-.tile span{font-size:16px;font-weight:600}
-.tile i{display:block;font-style:normal;font-size:12px;color:#697080;margin-top:2px}
-.pa{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.pa .v{font-size:30px;font-weight:800}
-.good{color:#1f9d55}.badc{color:#c53030}.amber{color:#b7791f}
-.log{font:12px ui-monospace,Menlo,monospace;color:#4a5160;max-height:180px;overflow:auto;white-space:pre-line}
-.muted2{color:#8a91a0;font-size:12px}
+.sc{max-width:600px;margin:0 auto;padding:0 16px 60px}
+.sc h2{font-size:16px;margin:0 0 10px}
+.sc .card{padding:16px;margin-bottom:12px;overflow:visible}
+.muted2{color:#697080;font-size:13px}
 #banner{display:none!important}
-.state{border-radius:12px;padding:14px 16px;margin-bottom:12px;border:1px solid #e3e6ea;background:#f6f7f9}
-.state .h{font-size:18px;font-weight:750;display:flex;align-items:center;gap:9px}
-.state .h .d{width:11px;height:11px;border-radius:50%;background:#9aa3b2;flex:none}
-.state .s{font-size:13px;color:#4a5160;margin-top:3px}
-.state.live{background:#eaf7ef;border-color:#bfe5cd}.state.live .d{background:#1f9d55;box-shadow:0 0 0 4px rgba(31,157,85,.18)}
-.state.wait{background:#fff7e6;border-color:#f1d9a6}.state.wait .d{background:#c98a12}
-.state.down{background:#fdecec;border-color:#f3b9b9}.state.down .d{background:#c53030}
-.readings.old{opacity:.5;filter:grayscale(1)}
-.readings.old .big{background:#9aa3b2!important}
-.oldtag{display:none;font-size:12px;font-weight:600;color:#697080;margin-bottom:8px}
-.readings.old .oldtag{display:block}
+.state{display:flex;align-items:center;gap:9px;font-size:14px;color:#4a5160;margin:4px 0 12px}
+.state .d{width:10px;height:10px;border-radius:50%;background:#9aa3b2;flex:none}
+.state.live .d{background:#1f9d55;box-shadow:0 0 0 4px rgba(31,157,85,.18)}
+.state.wait .d{background:#c98a12}.state.down .d{background:#c53030}
+.state b{color:#1b1d21}
+.old{opacity:.5}
+.now .what{font-size:19px;font-weight:700;line-height:1.3}
+.now .sub{font-size:14px;color:#4a5160;margin-top:3px}
+.msg{font-size:16px;font-weight:650;line-height:1.35}
+.msg2{font-size:13px;color:#697080;margin-top:4px}
+.msgbox{background:#f6f7f9;border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.msgbox.alarm{background:#c53030;color:#fff}.msgbox.alarm .msg2{color:#fde8e8}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pair .t{background:#f6f7f9;border-radius:10px;padding:12px 8px;text-align:center}
+.lbl{font-size:12px;color:#697080;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+.num{font-size:42px;font-weight:800;line-height:1.1;margin:4px 0 2px}
+.how{font-size:14px;font-weight:650;line-height:1.3}
+.src{font-size:12px;color:#697080;margin-top:5px}
+#target{display:block;margin:14px auto 0;width:100%;max-width:300px;height:auto}
+#tot{text-align:center;font-size:14px;margin-top:4px;color:#4a5160}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #eceef2;font-size:14px}
+.kv:last-child{border:0}.kv span:last-child{font-weight:650;text-align:right}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.acts button{padding:9px 14px;font-size:14px}
+details{margin-top:10px;font-size:14px;color:#4a5160;line-height:1.45}
+summary{cursor:pointer;color:#1b1d21;font-weight:650}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.tile{background:#f6f7f9;border-radius:9px;padding:9px 11px}
+.tile b{display:block;font-size:12px;color:#697080;font-weight:600}
+.tile span{font-size:15px;font-weight:650}
+.tile i{display:block;font-style:normal;font-size:12px;color:#697080}
+.g{color:#1f9d55}.a{color:#b7791f}.r{color:#c53030}
 </style>
 <div class="sc">
-  <div class="admhead"><h2>Scope live</h2><a href="{{ url_for('admin') }}" class="muted2">back to admin</a></div>
+  <div class="admhead"><h2 style="margin:16px 0 4px">Scope live</h2><a href="{{ url_for('admin') }}" class="muted2">back to admin</a></div>
+  <div class="state" id="state"><span class="d"></span><span id="stateh">Loading…</span></div>
 
-  <div class="card">
-    <div class="state" id="state"><div class="h"><span class="d"></span><span id="stateh">Loading…</span></div><div class="s" id="states"></div></div>
-    <div class="bar2">
-      <button class="primary" id="b-live" onclick="cmd('live')">Start live status ({{ window_min }} min)</button>
-      <button id="b-polar" onclick="cmd('polar')">Measure polar alignment</button>
-      <button id="b-stop" onclick="cmd('stop')" hidden>Stop</button>
-    </div>
-    <div class="muted2" style="margin-top:8px">The laptop next to the scope reads it about once a second while live. It costs the scope almost no power.</div>
-  </div>
-
-  <div class="readings" id="readings">
-  <div class="card">
-    <div class="oldtag" id="oldtag">Last known, not current</div>
-    <div class="big" id="power">–</div>
-    <div class="tiles" style="margin-top:10px">
-      <div class="tile"><b>Battery</b><span id="batt">–</span><i id="charger"></i></div>
-      <div class="tile"><b>Battery temp</b><span id="btemp">–</span></div>
-      <div class="tile"><b>Board temp</b><span id="temp">–</span></div>
-    </div>
+  <div id="body">
+  <div class="card now">
+    <div class="what" id="what">–</div>
+    <div class="sub" id="whatsub"></div>
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0">Alignment</h2>
+    <h2>Polar alignment</h2>
+    <div class="msgbox" id="msgbox"><div class="msg" id="msg">–</div><div class="msg2" id="msg2"></div></div>
+    <div class="pair">
+      <div class="t"><div class="lbl">Left / right</div><div class="num" id="lr">–</div><div class="how" id="lrh"></div><div class="src" id="lrs"></div></div>
+      <div class="t"><div class="lbl">Up / down</div><div class="num" id="ud">–</div><div class="how" id="udh"></div><div class="src" id="uds"></div></div>
+    </div>
+    <svg id="target" viewBox="-110 -110 220 220" aria-label="Where the polar axis points relative to the pole">
+      <circle r="100" fill="#fdf1f1"/><circle r="50" fill="#fdf8ec"/><circle r="25" fill="#ecf8f1"/>
+      <circle r="100" fill="none" stroke="#e0b4b4"/><circle r="50" fill="none" stroke="#e6cf9c"/><circle r="25" fill="none" stroke="#a9dcbf"/>
+      <line x1="-104" y1="0" x2="104" y2="0" stroke="#cfd3da"/><line x1="0" y1="-104" x2="0" y2="104" stroke="#cfd3da"/>
+      <text x="0" y="-88" text-anchor="middle" font-size="9" fill="#8a93a3">too high</text>
+      <text x="0" y="96" text-anchor="middle" font-size="9" fill="#8a93a3">too low</text>
+      <text x="-97" y="-4" font-size="9" fill="#8a93a3">west</text>
+      <text x="97" y="-4" text-anchor="end" font-size="9" fill="#8a93a3">east</text>
+      <text x="18.5" y="21" font-size="7" fill="#5aa77c">0.5&deg;</text><text x="36" y="40" font-size="7" fill="#b9953f">1&deg;</text><text x="72" y="76" font-size="7" fill="#c07a7a">2&deg;</text>
+      <circle r="3" fill="#1b2130"/>
+      <g id="dot" style="display:none"><circle id="dotc" r="8" fill="#c53030" stroke="#fff" stroke-width="2"/></g>
+    </svg>
+    <div id="tot"></div>
+    <div style="margin-top:12px">
+      <div class="kv"><span>Lean from upright (level sensor)</span><span id="tilt">–</span></div>
+      <div class="kv"><span>Lean that would be perfect</span><span id="tiltt">–</span></div>
+      <div class="kv"><span>Last full star measurement</span><span id="full">–</span></div>
+    </div>
+    <div class="acts">
+      <button class="primary" id="b-polar" onclick="cmd('polar')">Measure polar alignment</button>
+    </div>
+    <div class="muted2" style="margin-top:6px" id="polarnote">Needs dark sky (sun 12&deg; down) and the scope in tilted mode. The scope moves by itself for a few minutes.</div>
+    <details>
+      <summary>How to adjust</summary>
+      Stand south of the scope, facing north (the way it leans). Left/right = turn the TH10's pan base. Up/down = the TH10's tilt knob:
+      "lean more" lowers the dial number, "lean less" raises it. Make small turns, then hold still about 5 seconds so the stars can be re-read.
+      Up/down follows the level sensor instantly. Under 0.5&deg; is great, under 1&deg; is fine. When both are green, press Measure again to confirm.
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Scope</h2>
     <div class="tiles">
-      <div class="tile"><b>Lean from upright</b><span id="tilt">–</span><i id="tilthint"></i></div>
-      <div class="tile"><b>Tracking mode</b><span id="eq">–</span><i id="trk"></i></div>
-      <div class="tile"><b>Pointing</b><span id="point">–</span><i id="radec"></i></div>
-    </div>
-    <h2>Polar alignment <span class="muted2" id="paat"></span></h2>
-    <div class="pa">
-      <div class="tile"><b>Left / right</b><div class="v" id="paz">–</div><i id="pazh"></i></div>
-      <div class="tile"><b>Up / down</b><div class="v" id="palt">–</div><i id="palth"></i></div>
-    </div>
-    <div class="muted2" id="pastate" style="margin-top:8px"></div>
-  </div>
-
-  <div class="card">
-    <h2 style="margin-top:0">What it's doing</h2>
-    <div class="tiles">
-      <div class="tile"><b>Activity</b><span id="act">–</span><i id="actsub"></i></div>
-      <div class="tile"><b>Frames</b><span id="frames">–</span><i id="dropped"></i></div>
-      <div class="tile"><b>Wi-Fi</b><span id="wifi">–</span></div>
+      <div class="tile"><b>Power</b><span id="power">–</span><i id="charger"></i></div>
+      <div class="tile"><b>Battery</b><span id="batt">–</span><i id="btemp"></i></div>
       <div class="tile"><b>Storage free</b><span id="disk">–</span></div>
+      <div class="tile"><b>Board temp</b><span id="temp">–</span></div>
+      <div class="tile"><b>Mode</b><span id="eq">–</span><i id="trk"></i></div>
+      <div class="tile"><b>Pointing</b><span id="point">–</span><i id="radec"></i></div>
       <div class="tile"><b>Focus</b><span id="focus">–</span></div>
+      <div class="tile"><b>Wi-Fi</b><span id="wifi">–</span></div>
     </div>
   </div>
-
   </div>
-  <div class="card"><h2 style="margin-top:0">Changes</h2><div class="log" id="log"></div></div>
+  <div class="muted2">Live while this page is open: the laptop next to the scope reads it about once a second. It costs the scope almost no power.</div>
 </div>
 <script>
+window.onSiteChange = () => {};       // never reload this page mid-adjustment when something else on the site changes
 const $ = id => document.getElementById(id);
-let lastKey = null;
-function fmt(v, d=1){ return (v===null||v===undefined) ? '–' : Number(v).toFixed(d); }
+const fmt = (v, d=1) => (v===null||v===undefined) ? '–' : Number(v).toFixed(d);
+const col = v => { v = Math.abs(v); return v<=0.5 ? 'g' : v<=1 ? 'a' : 'r'; };
+const ago = s => { s = Math.max(0, Math.round(s)); return s < 90 ? s + ' s ago' : s < 5400 ? Math.round(s/60) + ' min ago' : Math.round(s/3600) + ' h ago'; };
+const clock = ts => new Date(ts*1000).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
 async function cmd(c){
   try{ await fetch('{{ url_for("admin_scope_cmd") }}', {method:'POST', headers:{'Content-Type':'application/json','X-Requested-With':'fetch'}, body: JSON.stringify({cmd:c})}); }catch(e){}
+  if (c === 'polar') { $('msg').textContent = 'Measurement requested. The laptop starts it within a few seconds.'; $('msg2').textContent = ''; }
   tick();
 }
-function dirText(err, kind){
-  if (err===null||err===undefined) return '';
-  if (Math.abs(err) <= 1) return 'good (under 1°)';
-  if (kind==='az') return err > 0 ? 'turn the head WEST (left, facing north)' : 'turn the head EAST (right, facing north)';
-  return err > 0 ? 'axis too high: lower the head scale by ' + Math.abs(err).toFixed(1) + '°' : 'axis too low: raise the head scale by ' + Math.abs(err).toFixed(1) + '°';
-}
+// keep the live window open while the page is visible
+let lastKeep = 0;
+function keepLive(){ if (!document.hidden && Date.now() - lastKeep > 60000) { lastKeep = Date.now(); cmd('live'); } }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastKeep = 0; keepLive(); } });
+
 async function tick(){
+  keepLive();
   let p;
-  try{ const r = await fetch('{{ url_for("admin_scope_json") }}', {cache:'no-store'}); if (r.redirected || !r.ok) { $('stateh').textContent='Signed out'; $('states').textContent='Reload the page and sign in again.'; return; } p = await r.json(); }catch(e){ $('stateh').textContent='Site not reachable'; $('states').textContent='Check your connection; this page retries on its own.'; return; }
-  const L = p.live || {}; const age = p.live_age;
+  try{ const r = await fetch('{{ url_for("admin_scope_json") }}', {cache:'no-store'}); if (r.redirected || !r.ok) { $('stateh').textContent='Signed out. Reload the page and sign in again.'; return; } p = await r.json(); }
+  catch(e){ $('state').className='state down'; $('stateh').textContent='Site not reachable from this phone. Retrying.'; return; }
+  const L = p.live || {}, age = p.live_age, now = p.now;
+  if (!p.live_on && !document.hidden && Date.now() - lastKeep > 5000) { lastKeep = 0; keepLive(); }   // switched off elsewhere: back on now, not in a minute
+  const LAT = L.lat != null ? L.lat : (L.tilt_target != null ? 90 - L.tilt_target : null);   // the agent sends the site latitude
   const current = p.live_on && age !== null && age < 8;
-  const when = L.ts ? new Date(L.ts*1000).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : null;
-  const ago = age===null ? '' : (age < 90 ? Math.round(age) + ' s ago' : age < 5400 ? Math.round(age/60) + ' min ago' : Math.round(age/3600) + ' h ago');
-  const st = $('state'); const left = Math.max(0, Math.ceil((p.live_until - p.now)/60));
-  if (current && L.reachable === false){ st.className='state down'; $('stateh').textContent='Live, but the scope isn\'t answering'; $('states').textContent='Is it switched on? ' + (L.error||''); }
-  else if (current){ st.className='state live'; $('stateh').textContent='Live'; $('states').textContent='Updating every second · ' + left + ' min left'; }
+  const st = $('state');
+  if (current && L.reachable === false){ st.className='state down'; $('stateh').innerHTML='<b>Scope not answering.</b> Is it switched on? ' + (L.error||''); }
+  else if (current){ st.className='state live'; $('stateh').innerHTML='<b>Live</b> · ' + new Date(L.ts*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'}); }
   else if (p.live_on){
-    const waited = p.now - (p.live_until - {{ window_min }}*60);
+    const waited = now - (p.live_until - {{ window_min }}*60);
     st.className='state wait';
-    $('stateh').textContent = waited < 20 ? 'Starting…' : 'Waiting for the laptop';
-    $('states').textContent = waited < 20 ? 'The laptop picks this up within a few seconds.' : 'No readings yet. The laptop next to the scope may be off or asleep.';
-  } else { st.className='state'; $('stateh').textContent='Not live'; $('states').textContent = when ? 'Showing the last reading, from ' + when + ' (' + ago + '). Press Start for current readings.' : 'No readings yet. Press Start.'; }
-  $('readings').className = 'readings' + (current ? '' : ' old');
-  $('oldtag').textContent = when ? 'Last known, from ' + when + ' — not current' : '';
-  $('b-live').textContent = p.live_on ? 'Add {{ window_min }} more min' : 'Start live status ({{ window_min }} min)';
-  $('b-stop').hidden = !p.live_on;
-  if (p.polar_requested) $('pastate').textContent = 'Polar alignment requested; the laptop will start it within a few seconds.';
+    $('stateh').innerHTML = waited < 20 ? '<b>Starting…</b> the laptop picks this up within a few seconds.' : '<b>Waiting for the laptop.</b> No fresh readings' + (L.ts ? ' since ' + clock(L.ts) : '') + '. It may be off, asleep, or offline.';
+  } else { st.className='state'; $('stateh').textContent='Not live.'; }
+  $('body').className = current ? '' : 'old';
   if (!p.live) return;
-  if (L.reachable === false){
-    $('power').className='big'; $('power').innerHTML = 'SCOPE NOT ANSWERING<small>' + (L.error||'is it switched on?') + '</small>';
-  } else {
-    $('power').className = 'big ' + (L.charge_online ? 'ok' : 'bad');
-    $('power').innerHTML = (current ? '' : 'Last known: ') + (L.charge_online ? 'POWER IN' : 'NO POWER IN') + '<small>' + (L.charger_status||'') + '</small>';
+
+  // what it's doing
+  if (L.reachable === false){ $('what').textContent = 'Scope not answering'; $('whatsub').textContent = L.error || ''; }
+  else {
+    $('what').textContent = (L.activity || '–') + (L.target ? ': ' + L.target : '');
+    const bits = [];
+    if (L.frames != null) bits.push(L.frames + ' frames kept' + (L.dropped ? ', ' + L.dropped + ' thrown out' : ''));
+    if (L.alt != null && !L.parked) bits.push('pointing ' + fmt(L.alt,0) + '° up');
+    $('whatsub').textContent = bits.join(' · ');
   }
-  $('batt').textContent = L.battery!=null ? L.battery + '%' : '–'; $('charger').textContent = L.charger_status || '';
-  $('btemp').textContent = L.battery_temp!=null ? L.battery_temp + ' °C' : '–'; $('temp').textContent = L.temp!=null ? fmt(L.temp) + ' °C' : '–';
-  if (L.tilt!=null){
-    $('tilt').textContent = fmt(L.tilt) + '°';
-    if (L.eq_mode){ const dv = L.tilt - (L.tilt_target||52.6); $('tilthint').textContent = Math.abs(dv)<=1 ? 'on target (' + fmt(L.tilt_target||52.6) + '°)' : (dv<0?'lean it ':'lean it less by ') + Math.abs(dv).toFixed(1) + '°' + (dv<0?' more':''); $('tilthint').className = Math.abs(dv)<=1?'good':'amber'; }
-    else { $('tilthint').textContent = L.tilt < 8 ? 'standing upright' : 'tilted; upright mode expects level'; $('tilthint').className=''; }
-  }
-  $('eq').textContent = L.eq_mode ? 'Tilted (EQ)' : 'Upright (alt-az)';
-  $('trk').textContent = (L.parked ? 'parked' : (L.tracking ? 'tracking the sky' : 'not tracking')) + (L.move_type && L.move_type!=='none' ? ' · moving' : '');
-  $('point').textContent = L.parked ? 'Folded (parked)' : (L.alt!=null ? fmt(L.alt) + '° up, ' + fmt(L.az,0) + '° az' : '–');
-  $('radec').textContent = (L.ra!=null && !L.parked) ? 'RA ' + fmt(L.ra,2) + 'h, Dec ' + fmt(L.dec,1) + '°' : '';
-  $('act').textContent = L.activity || '–'; $('actsub').textContent = L.target ? L.target : '';
-  $('frames').textContent = L.frames!=null ? L.frames : '–'; $('dropped').textContent = L.dropped!=null ? L.dropped + ' thrown out' : '';
-  $('wifi').textContent = L.wifi_dbm!=null ? L.wifi_dbm + ' dBm' : '–'; $('disk').textContent = L.storage_free_gb!=null ? L.storage_free_gb + ' GB' : '–';
-  $('focus').textContent = L.focus!=null ? L.focus : '–';
-  if (L.pa_state) $('pastate').textContent = L.pa_state;
+
+  // polar alignment
   const pa = p.pa;
-  if (!pa){ $('paat').textContent = 'not measured yet'; $('pazh').textContent = 'press Measure (at night, scope tilted)'; }
-  if (pa){
-    const paLive = pa.live && pa.ts && (p.now - pa.ts) < 20;
-    $('paat').innerHTML = paLive ? '<span class="good">● live, updated ' + Math.round(p.now - pa.ts) + ' s ago</span>' : 'measured ' + (p.pa_at_pac||'');
-    const ok = v => Math.abs(v) <= 1;
-    $('paz').textContent = Math.abs(pa.az_err).toFixed(1) + '°'; $('paz').className = 'v ' + (ok(pa.az_err)?'good':'badc'); $('pazh').textContent = dirText(pa.az_err,'az');
-    $('palt').textContent = Math.abs(pa.alt_err).toFixed(1) + '°'; $('palt').className = 'v ' + (ok(pa.alt_err)?'good':'badc'); $('palth').textContent = dirText(pa.alt_err,'alt');
+  const paTs = pa ? (pa.ts || null) : null;
+  const measTs = pa ? (pa.measured_ts || (pa.live ? null : paTs)) : null;
+  const tonight = measTs && (now - measTs) < 12*3600;
+  const c = (pa && pa.tilt_c != null) ? pa.tilt_c : 0;
+  const tiltOk = L.tilt != null && L.reachable !== false;
+  $('tilt').textContent = tiltOk ? fmt(L.tilt,2) + '°' : '–';
+  $('tiltt').textContent = LAT != null ? fmt(90 - LAT + c, 2) + '°' : '–';
+  $('full').textContent = measTs ? clock(measTs) + (pa.measured_total != null ? ' (' + fmt(pa.measured_total) + '° total)' : '') + (tonight ? '' : ', not tonight') : 'not yet';
+  let ud = null, lr = null;
+  if (tiltOk && L.eq_mode && LAT != null){
+    ud = (90 - L.tilt + c) - LAT;
+    $('ud').textContent = Math.abs(ud).toFixed(1) + '°'; $('ud').className = 'num ' + col(ud);
+    $('udh').textContent = Math.abs(ud) <= 0.5 ? 'good' : (ud > 0 ? 'Lean it MORE (dial number down)' : 'Lean it LESS (dial number up)');
+    $('uds').textContent = (pa && pa.tilt_c != null) ? 'live, level sensor checked against stars' : 'estimate from the level sensor';
+  } else {
+    $('ud').textContent = '–'; $('ud').className = 'num'; $('udh').textContent = L.eq_mode === false ? 'scope is in upright mode' : ''; $('uds').textContent = '';
   }
+  if (pa && tonight && pa.az_err != null){
+    lr = pa.az_err; const a = now - (paTs || measTs);
+    $('lr').textContent = Math.abs(lr).toFixed(1) + '°'; $('lr').className = 'num ' + col(lr);
+    $('lrh').textContent = Math.abs(lr) <= 0.5 ? 'good' : (lr > 0 ? 'Turn it WEST (to your left)' : 'Turn it EAST (to your right)');
+    $('lrs').textContent = (pa.live ? 'stars re-read ' : 'measured ') + ago(a) + (pa.live && a > 10 ? ' - hold still' : '');
+  } else {
+    $('lr').textContent = '–'; $('lr').className = 'num'; $('lrh').textContent = 'needs a star measurement'; $('lrs').textContent = '';
+  }
+  // message
+  const mb = $('msgbox'); mb.classList.remove('alarm');
+  if (L.tilt != null && L.tilt > 70){ mb.classList.add('alarm'); $('msg').textContent = 'Level sensor reads ' + fmt(L.tilt,0) + '°: the scope may have tipped.'; $('msg2').textContent = 'Check it before anything else.'; }
+  else if (p.polar_requested){ $('msg').textContent = 'Measurement requested. The laptop starts it within a few seconds.'; $('msg2').textContent = ''; }
+  else if (L.pa_state){ $('msg').textContent = L.pa_state; $('msg2').textContent = L.pa_hint || ''; }
+  else if (L.eq_mode === false){ $('msg').textContent = 'The scope is in upright (level) mode.'; $('msg2').textContent = 'Polar alignment only applies on the wedge.'; }
+  else if (!tonight){ $('msg').textContent = 'Not measured tonight.'; $('msg2').textContent = 'Up/down works now from the level sensor. Left/right needs the star measurement.'; }
+  else { $('msg').textContent = 'Last measured ' + clock(measTs) + '.'; $('msg2').textContent = 'Press Measure for live left/right while you adjust.'; }
+  // target dot: x = east, y = up; rings at 0.5 / 1 / 2 deg
+  if (ud != null){
+    const x = lr == null ? 0 : lr * Math.cos(LAT*Math.PI/180), y = ud, r = Math.hypot(x, y);
+    const sc = r <= 1 ? r*50 : (r <= 2 ? 50 + (r-1)*50 : Math.min(104, 100 + (r-2)*2)), k = r > 0 ? sc/r : 0;
+    $('dot').style.display = ''; $('dot').setAttribute('transform', 'translate(' + (x*k).toFixed(1) + ',' + (-y*k).toFixed(1) + ')');
+    $('dotc').setAttribute('fill', lr == null ? '#8a93a3' : (r <= 0.5 ? '#1f9d55' : r <= 1 ? '#d69e2e' : '#c53030'));
+    $('tot').textContent = lr == null ? 'Grey dot: up/down only until left/right is measured. Centre = the pole, seen facing north.'
+                                      : 'Total off: ' + r.toFixed(2) + '°. The dot is where the polar axis points, seen facing north.';
+  } else { $('dot').style.display = 'none'; $('tot').textContent = ''; }
+
+  // scope tiles
   if (L.reachable !== false){
-    const key = (L.charge_online?'power in':'no power') + ', ' + L.battery + '%' + (L.eq_mode ? ', tilt ' + fmt(L.tilt) : '');
-    if (key !== lastKey){ const t = new Date((L.ts||p.now)*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'}); $('log').textContent = t + '  ' + key + '\n' + $('log').textContent; lastKey = key; }
+    $('power').textContent = L.charge_online ? 'Plugged in' : 'On battery'; $('power').className = L.charge_online ? 'g' : '';
+    $('charger').textContent = L.charger_status || '';
+    $('batt').textContent = L.battery != null ? L.battery + '%' : '–'; $('batt').className = (L.battery != null && L.battery < 20 && !L.charge_online) ? 'r' : '';
+    $('btemp').textContent = L.battery_temp != null ? L.battery_temp + ' °C' : '';
+    $('disk').textContent = L.storage_free_gb != null ? L.storage_free_gb + ' GB' : '–'; $('disk').className = (L.storage_free_gb != null && L.storage_free_gb < 10) ? 'r' : '';
+    $('temp').textContent = L.temp != null ? fmt(L.temp) + ' °C' : '–';
+    $('eq').textContent = L.eq_mode ? 'Tilted (wedge)' : 'Upright (level)';
+    $('trk').textContent = (L.parked ? 'parked' : (L.tracking ? 'tracking the sky' : 'not tracking')) + (L.move_type && L.move_type !== 'none' ? ' · moving' : '');
+    $('point').textContent = L.parked ? 'Folded' : (L.alt != null ? fmt(L.alt,0) + '° up, ' + fmt(L.az,0) + '° az' : '–');
+    $('radec').textContent = (L.ra != null && !L.parked) ? 'RA ' + fmt(L.ra,2) + 'h, Dec ' + fmt(L.dec,1) + '°' : '';
+    $('focus').textContent = L.focus != null ? L.focus : '–';
+    $('wifi').textContent = L.wifi_dbm != null ? L.wifi_dbm + ' dBm' : '–';
   }
+  $('b-polar').textContent = (pa && pa.live && paTs && now - paTs < 30) ? 'Measure again (full)' : 'Measure polar alignment';
 }
 tick(); setInterval(tick, 1000);
 </script>

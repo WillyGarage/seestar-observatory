@@ -565,6 +565,22 @@ def stop_stack():
 CROPS = {"square1050": (1050, 1050), "square1300": (1300, 1300), "square900": (900, 900), "wide1400": (2160, 1400)}
 
 
+
+PLANETARY = {"M57", "M27", "M76", "M97", "NGC 7293", "NGC 246", "NGC 6543", "NGC 7662", "NGC 2392"}
+REMNANTS = {"M1", "NGC 6992", "NGC 6960", "NGC 6995", "IC 443", "Sh2-240"}
+
+
+def photo_kind(item):
+    """Site type from public-site/static/photo_types.json; gallery publish refuses anything else (2026-10-25)."""
+    k = item.get("kind")
+    if k and k != "Deep sky":
+        return k
+    ty, obj = (item.get("type") or "").lower(), (item.get("object") or "").strip()
+    if obj in PLANETARY: return "Planetary nebulae"
+    if obj in REMNANTS: return "Supernova remnants"
+    return {"planet": "Planets", "moon": "Moon", "sun": "Sun", "galaxy": "Galaxies", "cluster": "Star clusters"}.get(ty, "Nebulae")
+
+
 def process_and_publish(item, t_start):
     """Pull the scope's stacked master, render full + close-up, add to the gallery, publish, close the request."""
     sh(SEESTAR, "pull", timeout=900)
@@ -593,7 +609,7 @@ def process_and_publish(item, t_start):
     sh(SEESTAR, "gallery", "add", "--featured", "--credit", credit, str(close), check=True)
     meta = jload(GAL / "meta.json", {})
     total = int(frames * sub); mins = total // 60
-    common = {"object": item["object"], "kind": item.get("kind", "Deep sky"), "taken": taken, "frames": frames, "sub": sub,
+    common = {"object": item["object"], "kind": photo_kind(item), "taken": taken, "frames": frames, "sub": sub,
               "total_exp": total, "filter": filt, "gain": 200, "credit": credit}
     if item.get("request_id"):
         common["request_id"] = item["request_id"]
