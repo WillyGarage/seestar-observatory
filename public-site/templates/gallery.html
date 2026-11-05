@@ -65,7 +65,7 @@
   <th data-k="title">Name<span class="ar"></span></th><th data-k="object">Object<span class="ar"></span></th><th data-k="kind">Type<span class="ar"></span></th>
   <th data-k="taken">Taken<span class="ar"></span></th><th data-k="frames">Frames<span class="ar"></span></th><th data-k="pixels">Size<span class="ar"></span></th><th data-k="bytes">File<span class="ar"></span></th>
 </tr></thead><tbody></tbody></table>
-<div id="lb"><img><div class="cap"></div></div>
+<script src="/static/viewer.js?v=3"></script>
 <script>
 let ITEMS = {{ items | tojson }};
 const $ = s => document.querySelector(s);
@@ -210,14 +210,20 @@ $('#grid').onclick = e => {
   if(btn){ toggleLike(btn); return; }
   const img = e.target.closest('img[data-f]');
   if(!img) return;
-  const f = img.dataset.f;
-  const i = ITEMS.find(x=>x.filename===f);
-  $('#lb img').src = '/full/'+f;
-  $('#lb .cap').innerHTML = `${i.title} &middot; ${fdate(i.taken)} &middot; <a href="/full/${f}">full size ${i.width}&times;${i.height}</a>`;
-  $('#lb').classList.add('open');
+  openViewer(img.dataset.f);
 };
-$('#lb').onclick = e => { if(e.target.tagName!=='A') $('#lb').classList.remove('open') };
-addEventListener('keydown', e => e.key==='Escape' && $('#lb').classList.remove('open'));
+// Photo viewer (static/viewer.js): whole picture first, every pixel on click; next/previous follow the current sort and filter.
+function openViewer(f){
+  const a = sorted();
+  const list = a.map(i => ({full: '/full/'+i.filename, thumb: '/thumb/'+i.filename, title: i.title,
+    sub: [i.object, fdate(i.taken), `${i.width}\u00d7${i.height} pixels`].filter(Boolean).join(' \u00b7 '), w: i.width, h: i.height}));
+  Viewer.open(list, Math.max(0, a.findIndex(i => i.filename === f)));
+}
+$('#list').addEventListener('click', e => {
+  const l = e.target.closest('a[href^="/full/"]');
+  if(!l || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  e.preventDefault(); openViewer(decodeURIComponent(l.getAttribute('href').slice(6)));
+});
 render();
 window.onSiteChange = async () => {
   try { const r = await fetch('/gallery.json', {cache:'no-store'}); if(r.ok){ ITEMS = await r.json(); ITEMS.forEach(i => i.pixels = (i.width || 0) * (i.height || 0)); buildKinds(); render(); } } catch(_) {}

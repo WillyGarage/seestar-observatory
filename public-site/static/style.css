@@ -37,12 +37,6 @@ th{cursor:pointer;color:#697080;font-weight:600;user-select:none}
 th:hover{color:#1b1d21}
 td.n{white-space:normal}
 tbody tr:hover{background:#fff}
-#lb{position:fixed;inset:0;background:rgba(12,14,18,.94);display:none;z-index:50;
-    align-items:center;justify-content:center;flex-direction:column;padding:16px}
-#lb.open{display:flex}
-#lb img{max-width:100%;max-height:calc(100% - 52px);object-fit:contain}
-#lb .cap{color:#dfe3e9;font-size:13px;margin-top:10px;text-align:center}
-#lb .cap a{color:#8fb8ff}
 .empty{max-width:1200px;margin:40px auto;padding:0 20px;color:#697080}
 
 .panel{max-width:640px;margin:0 auto;padding:10px 20px 60px}
