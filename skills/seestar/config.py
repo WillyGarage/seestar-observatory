@@ -47,7 +47,28 @@ HERE = Path(__file__).resolve().parent
 # --- the telescope -----------------------------------------------------------
 # Give the scope a DHCP reservation on your router so this never changes. WSL2 and
 # most container setups cannot see UDP discovery or mDNS, so an IP is required.
-SCOPE_IP = get("SEESTAR_IP", "")
+# Behind a Wi-Fi range extender the scope gets a different address depending on whether
+# it joined the extender or the router (the extender rewrites its MAC). List both,
+# comma-separated, and the first one that answers is used: SEESTAR_IP=192.168.1.50,192.168.1.51
+SCOPE_IPS = [a.strip() for a in get("SEESTAR_IP", "").split(",") if a.strip()]
+
+
+def _answers(ip, port=4700, timeout=1.5):
+    import socket
+    try:
+        with socket.create_connection((ip, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def find_ip():
+    """The first configured address the scope answers on right now, or None."""
+    return next((ip for ip in SCOPE_IPS if _answers(ip)), None)
+
+
+# One address: use it as is (no probe). Several: probe once at import.
+SCOPE_IP = (find_ip() or SCOPE_IPS[0]) if len(SCOPE_IPS) > 1 else (SCOPE_IPS[0] if SCOPE_IPS else "")
 
 # --- where you are -----------------------------------------------------------
 # Decimal degrees, north and east positive. Used for Sun/Moon/planet positions and
