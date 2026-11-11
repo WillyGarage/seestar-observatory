@@ -200,9 +200,9 @@ async function tick(){
     $('power').textContent = L.charge_online ? 'Plugged in' : 'On battery'; $('power').className = L.charge_online ? 'g' : '';
     $('charger').textContent = L.charger_status || '';
     $('batt').textContent = L.battery != null ? L.battery + '%' : '–'; $('batt').className = (L.battery != null && L.battery < 20 && !L.charge_online) ? 'r' : '';
-    $('btemp').textContent = L.battery_temp != null ? L.battery_temp + ' °C' : '';
+    $('btemp').textContent = L.battery_temp != null ? fmt(L.battery_temp*9/5+32,0) + ' °F' : '';
     $('disk').textContent = L.storage_free_gb != null ? L.storage_free_gb + ' GB' : '–'; $('disk').className = (L.storage_free_gb != null && L.storage_free_gb < 10) ? 'r' : '';
-    $('temp').textContent = L.temp != null ? fmt(L.temp) + ' °C' : '–';
+    $('temp').textContent = L.temp != null ? fmt(L.temp*9/5+32,0) + ' °F' : '–';
     $('eq').textContent = L.eq_mode ? 'Tilted (wedge)' : 'Upright (level)';
     $('trk').textContent = (L.parked ? 'parked' : (L.tracking ? 'tracking the sky' : 'not tracking')) + (L.move_type && L.move_type !== 'none' ? ' · moving' : '');
     $('point').textContent = L.parked ? 'Folded' : (L.alt != null ? fmt(L.alt,0) + '° up, ' + fmt(L.az,0) + '° az' : '–');
