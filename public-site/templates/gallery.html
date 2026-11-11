@@ -37,6 +37,7 @@
 <div class="bar"><div class="in">
   <label for="sort">Sort</label>
   <select id="sort">
+    <option value="best-desc" selected>Latest 4, then best</option>
     <option value="taken-desc">Newest first</option>
     <option value="taken-asc">Oldest first</option>
     <option value="title-asc">Name A-Z</option>
@@ -51,8 +52,17 @@
   <button id="blist">List</button>
 </div></div>
 <div class="kindinfo" id="kindinfo" hidden></div>
+<div id="latestwrap" hidden>
+  <h2 class="sec">Latest pictures</h2>
+  <div class="grid latest" id="latest"></div>
+  <h2 class="sec">Best first</h2>
+</div>
 <div class="grid" id="grid"></div>
 <style>
+.sec{max-width:1200px;margin:14px auto 0;padding:0 20px;font-size:17px;font-weight:600;color:#1b1d21}
+.grid.latest{padding-bottom:4px}
+.grid.cols{columns:auto;display:flex;gap:18px;align-items:flex-start}
+.grid.cols>.col{flex:1;min-width:0}
 #kind{max-width:min(320px,100%);text-overflow:ellipsis}
 .kindinfo{max-width:1200px;margin:2px auto 8px;padding:0 20px;font-size:14px;color:#4a5160}
 .kindinfo b{color:#1b1d21}
@@ -113,6 +123,15 @@ function sorted(){
   const okKind = i => !kind || (kind[0]==='g' ? GROUP_OF[i.kind]===kind.slice(2) : i.kind===kind.slice(2));
   let a = ITEMS.filter(i => okKind(i) &&
     (!q || [i.title, i.object, i.kind, GROUP_OF[i.kind], ABOUT[i.kind], i.notes].join(' ').toLowerCase().includes(q)));
+  if(k==='best'){
+    // Latest 4 by date, then the rest by quality (our own 0-100 judgement; unscored counts as 60), newest first on ties
+    const byDate = (x,y) => String(y.taken||'').localeCompare(String(x.taken||''));
+    const latest = [...a].sort(byDate).slice(0, 4);
+    const rest = a.filter(i => !latest.includes(i)).sort((x,y) => ((y.quality??60) - (x.quality??60)) || byDate(x,y));
+    LATEST_N = latest.length;
+    return latest.concat(rest);
+  }
+  LATEST_N = 0;
   a.sort((x,y)=>{
     let p=x[k], r=y[k];
     if(k==='kind'){ p=ORDER[p]??99; r=ORDER[r]??99; }
@@ -124,9 +143,30 @@ function sorted(){
   return a;
 }
 
+let LATEST_N = 0;
 function render(){
   const a = sorted();
-  $('#grid').innerHTML = a.map(i=>`
+  $('#latestwrap').hidden = !LATEST_N;
+  deal($('#latest'), a.slice(0, LATEST_N));
+  deal($('#grid'), a.slice(LATEST_N));
+  if (!a.length) $('#grid').innerHTML = '<div class="empty">Nothing here yet.</div>';
+  $('#list tbody').innerHTML = a.map(i=>`
+    <tr><td class="n"><a href="/full/${i.filename}">${i.title}</a></td><td>${i.object}</td><td>${i.kind}</td>
+    <td>${fdate(i.taken)}</td><td>${i.frames??''}</td>
+    <td>${i.width}&times;${i.height}</td><td>${fsize(i.bytes)}</td></tr>`).join('');
+  arrows();
+}
+// Cards are dealt left to right into columns, so the order reads across each row (best first stays at the top).
+function ncols(){ const w = $('#grid').clientWidth - 40; return innerWidth <= 700 ? 1 : Math.max(1, Math.min(4, Math.floor((w + 18) / 278))); }
+function deal(el, items){
+  const n = ncols(), cols = Array.from({length: n}, () => []);
+  items.forEach((it, k) => cols[k % n].push(card(it)));
+  el.classList.add('cols');
+  el.innerHTML = cols.map(c => `<div class="col">${c.join('')}</div>`).join('');
+}
+let NC = 0; addEventListener('resize', () => { const n = ncols(); if (n !== NC) { NC = n; render(); } });
+function card(i){
+  return `
     <div class="card">
       <img loading="lazy" src="/thumb/${i.filename}" data-f="${i.filename}" alt="${i.title}">
       <div class="meta">
@@ -144,12 +184,7 @@ function render(){
           <span class="heart">&hearts;</span><span class="n">${i.likes||0}</span>
         </button>
       </div>
-    </div>`).join('') || '<div class="empty">Nothing here yet.</div>';
-  $('#list tbody').innerHTML = a.map(i=>`
-    <tr><td class="n"><a href="/full/${i.filename}">${i.title}</a></td><td>${i.object}</td><td>${i.kind}</td>
-    <td>${fdate(i.taken)}</td><td>${i.frames??''}</td>
-    <td>${i.width}&times;${i.height}</td><td>${fsize(i.bytes)}</td></tr>`).join('');
-  arrows();
+    </div>`;
 }
 
 $('#sort').onchange = render;
@@ -205,7 +240,7 @@ async function toggleLike(btn){
   } catch(_) {}
   btn.disabled = false;
 }
-$('#grid').onclick = e => {
+$('#grid').onclick = $('#latest').onclick = e => {
   const btn = e.target.closest('.like');
   if(btn){ toggleLike(btn); return; }
   const img = e.target.closest('img[data-f]');

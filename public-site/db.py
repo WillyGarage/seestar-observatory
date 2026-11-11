@@ -105,6 +105,10 @@ def init_db():
     # show on the public gallery). Existing rows were all hand-picked, so they stay featured.
     if "featured" not in _columns(conn, "photos"):
         conn.execute("ALTER TABLE photos ADD COLUMN featured INTEGER NOT NULL DEFAULT 1")
+    # Migration: photos.quality = our own 0-100 judgement of how good the picture is; the gallery's
+    # default sort shows the latest 4, then everything else best first.
+    if "quality" not in _columns(conn, "photos"):
+        conn.execute("ALTER TABLE photos ADD COLUMN quality INTEGER")
     # Migration: request scheduling columns. target = the object the approver chose (what the
     # telescope resolves); source = visitor | ai | owner; planned_for = tonight | next | null;
     # position = manual order among AI picks (visitors are always in arrival order).

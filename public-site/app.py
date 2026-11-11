@@ -40,7 +40,7 @@ LIKES_PER_IP_PER_PHOTO = 5
 ALLOWED_STATUSES = {"new", "accepted", "scheduled", "done", "rejected"}
 QUEUE_STATUSES = ("accepted", "scheduled", "done")
 OPEN_STATUSES = ("accepted", "scheduled")
-PHOTO_FIELDS = ("title", "object", "kind", "taken", "frames", "sub", "total_exp", "filter", "gain", "notes", "credit")
+PHOTO_FIELDS = ("title", "object", "kind", "taken", "frames", "sub", "total_exp", "filter", "gain", "notes", "credit", "quality")
 REQUEST_FIELDS = ("display_prompt", "triage_note", "target", "source", "planned_for", "position")
 # Older databases may hold a different owner token here; unknown values are accepted on
 # read and only ever grouped as "not a visitor".
@@ -828,6 +828,8 @@ def api_photos():
                        (safe, meta.get("title"), meta.get("object"), meta.get("kind"), meta.get("taken"), meta.get("frames"), meta.get("sub"), meta.get("total_exp"),
                         meta.get("filter"), meta.get("gain"), meta.get("notes"), meta.get("credit") or "AI", request_id, ts, width, height, full_path.stat().st_size, featured))
     photo_id = cur.lastrowid
+    if meta.get("quality") is not None:
+        conn.execute("UPDATE photos SET quality = ? WHERE id = ?", (meta["quality"], photo_id))
     if request_id is not None:
         conn.execute("UPDATE requests SET status = 'done', photo_id = ?, updated_at = ? WHERE id = ?", (photo_id, ts, request_id))
     bump(conn); conn.commit(); conn.close()
