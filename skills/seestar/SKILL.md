@@ -28,6 +28,12 @@ Getting the hardware working in the first place: `docs/seestar-device-notes.md`.
 
 1. **Sun**: the magnetic solar filter must be ON before any Sun work, and must stay on
    until `seestar park` has moved the scope off the Sun. Never remove it while aimed.
+   **Sun guard** (`sunguard.py`, on for the CLI and anything that imports `seestar`): in
+   daylight, gotos/views/nudges within 30 deg of the Sun are refused, and Sun view is refused
+   outright, unless `SEESTAR_FILTER_ON=1` is set. Set it only after the black-sky filter check
+   passes, e.g. `SEESTAR_FILTER_ON=1 seestar sun`. Daytime scripts that move the scope for
+   minutes or hours (clouds, landscapes) must also call `sunguard.check_pointing()` before
+   each exposure, because the Sun moves ~15 deg an hour, and stop on `sunguard.bright_frame()`.
 2. **Quality first**: deliver the best image the hardware can make - centred, focus
    verified by sweep, full-res raw frames stacked - unless asked for a quick look.
    Live-stream frames (1080x1920) are for aiming and focusing, not the final picture.

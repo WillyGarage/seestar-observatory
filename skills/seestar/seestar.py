@@ -49,6 +49,8 @@ import contextlib, io  # noqa: E402
 with contextlib.redirect_stdout(io.StringIO()):  # seestarpy prints an mDNS 'not found' line on import
     from seestarpy import connection as conn, raw  # noqa: E402
 conn.DEFAULT_IP = SCOPE_IP
+import sunguard  # noqa: E402
+sunguard.install(raw)  # refuse gotos/views/nudges near the Sun unless the filter is declared on
 conn.VERBOSE_LEVEL = int(os.environ.get("SEESTAR_VERBOSE", "0"))  # set 1 to see every JSON-RPC exchange
 
 
